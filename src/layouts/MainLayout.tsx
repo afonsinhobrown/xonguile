@@ -141,14 +141,21 @@ function LicenseBadge() {
     if (!license) return null;
 
     const isTrial = license.type === 'trial';
+    const isLifetime = license.type === 'lifetime';
     const daysLeft = Math.ceil((new Date(license.validUntil).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+
+    let label = 'Premium';
+    if (isTrial) label = 'Teste Grátis';
+    if (isLifetime) label = 'Vitalício';
 
     return (
         <div className={clsx(
             "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
-            isTrial ? "bg-orange-100 text-orange-700 border border-orange-200" : "bg-purple-100 text-purple-700 border border-purple-200"
+            isTrial ? "bg-orange-100 text-orange-700 border border-orange-200" :
+                isLifetime ? "bg-emerald-100 text-emerald-700 border border-emerald-200" :
+                    "bg-purple-100 text-purple-700 border border-purple-200"
         )}>
-            {isTrial ? 'Teste Grátis' : 'Premium'} • {daysLeft}d
+            {label} {!isLifetime && `• ${daysLeft}d`}
         </div>
     );
 }

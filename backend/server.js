@@ -90,7 +90,13 @@ app.post('/register-salon', async (req, res) => {
 
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
-    const user = await User.findOne({ where: { email, password }, include: [Salon] });
+    const user = await User.findOne({
+        where: { email, password },
+        include: [{
+            model: Salon,
+            include: [License]
+        }]
+    });
 
     if (!user) return res.status(400).json({ error: 'Credenciais inválidas' });
 
