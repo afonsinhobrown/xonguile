@@ -42,7 +42,7 @@ export function MainLayout() {
                     <NavItem to="/admin/caixa" icon={<ShoppingCart size={20} />} label="Caixa / PDV" />
                     <NavItem to="/admin/agenda" icon={<CalendarIcon size={20} />} label="Agenda" />
                     <NavItem to="/admin/clientes" icon={<Users size={20} />} label="Clientes" />
-                    <NavItem to="/admin/profissionais" icon={<Scissors size={20} />} label="Pronto para deploy profissional agora!" />
+                    <NavItem to="/admin/profissionais" icon={<Scissors size={20} />} label="Profissionais" />
                     <NavItem to="/admin/servicos" icon={<Sparkles size={20} />} label="Serviços" />
                     <NavItem to="/admin/estoque" icon={<Package size={20} />} label="Estoque" />
                     <NavItem to="/admin/financeiro" icon={<Banknote size={20} />} label="Financeiro" />
@@ -91,7 +91,7 @@ export function MainLayout() {
                     <span className="text-[10px] font-medium text-gray-600 mt-1">Caixa</span>
                 </NavLink>
 
-                <MobileNavItem to="/admin/financeiro" icon={<Banknote size={20} />} label="Caixa" />
+                <MobileNavItem to="/admin/financeiro" icon={<Banknote size={20} />} label="Financeiro" />
                 <MobileNavItem to="/admin/configuracoes" icon={<Menu size={20} />} label="Menu" />
             </nav>
 

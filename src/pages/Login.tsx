@@ -45,6 +45,7 @@ export default function LoginPage() {
                                 <input
                                     type="email"
                                     required
+                                    autoComplete="email"
                                     className="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-purple-400 transition-all"
                                     placeholder="admin@salao.com"
                                     value={email}
@@ -60,6 +61,7 @@ export default function LoginPage() {
                                 <input
                                     type="password"
                                     required
+                                    autoComplete="current-password"
                                     className="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-purple-400 transition-all"
                                     placeholder="••••••"
                                     value={password}
