@@ -38,21 +38,27 @@ export function MainLayout() {
                 </div>
 
                 <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-                    <NavItem to="/" icon={<LayoutDashboard size={20} />} label="Dashboard" />
-                    <NavItem to="/caixa" icon={<ShoppingCart size={20} />} label="Caixa / PDV" />
-                    <NavItem to="/agenda" icon={<CalendarIcon size={20} />} label="Agenda" />
-                    <NavItem to="/clientes" icon={<Users size={20} />} label="Clientes" />
-                    <NavItem to="/profissionais" icon={<Scissors size={20} />} label="Profissionais" />
-                    <NavItem to="/servicos" icon={<Sparkles size={20} />} label="Serviços" />
-                    <NavItem to="/estoque" icon={<Package size={20} />} label="Estoque" />
-                    <NavItem to="/financeiro" icon={<Banknote size={20} />} label="Financeiro" />
+                    <NavItem to="/admin" icon={<LayoutDashboard size={20} />} label="Dashboard" />
+                    <NavItem to="/admin/caixa" icon={<ShoppingCart size={20} />} label="Caixa / PDV" />
+                    <NavItem to="/admin/agenda" icon={<CalendarIcon size={20} />} label="Agenda" />
+                    <NavItem to="/admin/clientes" icon={<Users size={20} />} label="Clientes" />
+                    <NavItem to="/admin/profissionais" icon={<Scissors size={20} />} label="Pronto para deploy profissional agora!" />
+                    <NavItem to="/admin/servicos" icon={<Sparkles size={20} />} label="Serviços" />
+                    <NavItem to="/admin/estoque" icon={<Package size={20} />} label="Estoque" />
+                    <NavItem to="/admin/financeiro" icon={<Banknote size={20} />} label="Financeiro" />
                     <div className="pt-4 mt-4 border-t border-gray-100">
-                        <NavItem to="/configuracoes" icon={<Settings size={20} />} label="Configurações" />
+                        <NavItem to="/admin/configuracoes" icon={<Settings size={20} />} label="Configurações" />
                     </div>
                 </nav>
 
                 <div className="p-4 border-t border-gray-100">
-                    <button className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors text-sm font-medium">
+                    <button
+                        onClick={() => {
+                            localStorage.removeItem('salao_user');
+                            window.location.href = '/login';
+                        }}
+                        className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors text-sm font-medium"
+                    >
                         <LogOut size={18} />
                         <span>Sair</span>
                     </button>
@@ -62,8 +68,8 @@ export function MainLayout() {
             {/* --- Mobile Header (Visible on Mobile) --- */}
             <header className="md:hidden h-14 bg-white border-b border-gray-200 flex items-center justify-center px-4 shrink-0 shadow-sm relative z-20">
                 <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-purple-600 rounded-md flex items-center justify-center text-white font-bold text-sm">S</div>
-                    <span className="font-bold text-lg text-gray-800">Salao<span className="text-purple-600">App</span></span>
+                    <div className="w-6 h-6 bg-purple-600 rounded-md flex items-center justify-center text-white font-bold text-sm">X</div>
+                    <span className="font-bold text-lg text-gray-800">Xonguile<span className="text-purple-600">App</span></span>
                 </div>
             </header>
 
@@ -74,19 +80,19 @@ export function MainLayout() {
 
             {/* --- Mobile Bottom Nav (Visible on Mobile) --- */}
             <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center h-16 px-2 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                <MobileNavItem to="/" icon={<LayoutDashboard size={20} />} label="Início" />
-                <MobileNavItem to="/agenda" icon={<CalendarIcon size={20} />} label="Agenda" />
+                <MobileNavItem to="/admin" icon={<LayoutDashboard size={20} />} label="Início" />
+                <MobileNavItem to="/admin/agenda" icon={<CalendarIcon size={20} />} label="Agenda" />
 
                 {/* Highlighted POS Button */}
-                <NavLink to="/caixa" className="flex flex-col items-center justify-center -mt-8">
+                <NavLink to="/admin/caixa" className="flex flex-col items-center justify-center -mt-8">
                     <div className="w-14 h-14 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-lg shadow-purple-600/30 border-4 border-gray-50">
                         <ShoppingCart size={24} />
                     </div>
                     <span className="text-[10px] font-medium text-gray-600 mt-1">Caixa</span>
                 </NavLink>
 
-                <MobileNavItem to="/financeiro" icon={<Banknote size={20} />} label="Caixa" />
-                <MobileNavItem to="/configuracoes" icon={<Menu size={20} />} label="Menu" />
+                <MobileNavItem to="/admin/financeiro" icon={<Banknote size={20} />} label="Caixa" />
+                <MobileNavItem to="/admin/configuracoes" icon={<Menu size={20} />} label="Menu" />
             </nav>
 
         </div>
