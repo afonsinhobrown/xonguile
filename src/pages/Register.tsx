@@ -26,14 +26,7 @@ export default function RegisterPage() {
         e.preventDefault();
         setLoading(true);
         try {
-            await fetch('http://localhost:3001/register-salon', {
-                method: 'POST',
-                body: JSON.stringify(formData),
-                headers: { 'Content-Type': 'application/json' }
-            }).then(async res => {
-                if (!res.ok) throw await res.json();
-                return res.json();
-            });
+            await api.registerSalon(formData);
 
             alert('Conta criada com sucesso! Faça login para começar seu Teste Grátis de 10 dias.');
             navigate('/login');

@@ -19,6 +19,13 @@ export const api = {
         return res.json();
     }),
 
+    registerSalon: async (data: any) => fetch(`${API_URL}/register-salon`, {
+        method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' }
+    }).then(async res => {
+        if (!res.ok) throw await res.json();
+        return res.json();
+    }),
+
     // Professionals
     getProfessionals: async () => fetch(`${API_URL}/professionals`, { headers: getHeaders() }).then(res => res.json()),
     addProfessional: async (data: any) => fetch(`${API_URL}/professionals`, {
