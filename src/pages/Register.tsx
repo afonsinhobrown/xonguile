@@ -83,7 +83,7 @@ export default function RegisterPage() {
                             label="Email Profissional"
                             name="adminEmail"
                             type="email"
-                            placeholder="contato@salao.com"
+                            placeholder="teu@email.com"
                             required
                             value={formData.adminEmail}
                             onChange={handleChange}

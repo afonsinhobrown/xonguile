@@ -48,13 +48,21 @@ app.post('/register-salon', async (req, res) => {
     const { salonName, adminName, adminEmail, adminPassword, phone } = req.body;
 
     try {
+        // Check if user already exists
+        const existingUser = await User.findOne({ where: { email: adminEmail } });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Este email já está em uso por outro salão.' });
+        }
+
         const result = await sequelize.transaction(async (t) => {
             // 1. Create Salon
-            const slug = salonName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Math.floor(Math.random() * 1000);
+            const slugBase = salonName ? salonName.toLowerCase().trim().replace(/[^a-z0-9]/g, '-') : 'unnamed-salon';
+            const slug = `${slugBase}-${Math.floor(Math.random() * 10000)}`;
+
             const salon = await Salon.create({
-                name: salonName,
+                name: salonName || 'Novo Salão',
                 slug,
-                phone
+                phone: phone || ''
             }, { transaction: t });
 
             // 2. Create 10-Day Free Trial License
@@ -312,12 +320,12 @@ app.listen(PORT, async () => {
         // Bootstrap default salon if empty
         const count = await Salon.count();
         if (count === 0) {
-            console.log("Creating Default Admin Tenant...");
-            const salon = await Salon.create({ name: 'Meu Salão Demo', slug: 'demo' });
+            console.log("Creating Official Admin Tenant...");
+            const salon = await Salon.create({ name: 'Xonguile App Admin', slug: 'admin' });
 
             // Lifetime license
             await License.create({
-                key: 'LICENSE-MASTER-01',
+                key: 'XONGUILE-MASTER-001',
                 type: 'lifetime',
                 status: 'active',
                 validUntil: new Date('2099-12-31'),
@@ -326,13 +334,13 @@ app.listen(PORT, async () => {
 
             // Default User
             await User.create({
-                name: 'Administrador',
-                email: 'admin@salao.com',
+                name: 'Afonsinho Brown',
+                email: 'admin@angiarte.com',
                 password: '123',
                 role: 'admin',
                 SalonId: salon.id
             });
-            console.log("DEFAULT USER CREATED: admin@salao.com / 123");
+            console.log("OFFICIAL ADMIN CREATED: admin@angiarte.com / 123");
         }
 
     } catch (error) {
