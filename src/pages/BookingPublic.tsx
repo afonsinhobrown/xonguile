@@ -26,7 +26,9 @@ export default function BookingPublicPage() {
     const [selectedDate, setSelectedDate] = useState(DateTime.now().toISODate());
     const [selectedTime, setSelectedTime] = useState('');
     const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+    const [fetchingSlots, setFetchingSlots] = useState(false);
     const [availableProfessionals, setAvailableProfessionals] = useState<any[]>([]);
+    const [fetchingProfs, setFetchingProfs] = useState(false);
     const [selectedProfessional, setSelectedProfessional] = useState<any>(null);
 
     // Client State
@@ -74,7 +76,11 @@ export default function BookingPublicPage() {
 
     useEffect(() => {
         if (salonId && selectedDate && step === 2) {
-            api.publicGetSlots(salonId, selectedDate).then(setAvailableSlots);
+            setFetchingSlots(true);
+            api.publicGetSlots(salonId, selectedDate).then(slots => {
+                setAvailableSlots(slots);
+                setFetchingSlots(false);
+            });
         }
     }, [salonId, selectedDate, step]);
 
@@ -84,6 +90,27 @@ export default function BookingPublicPage() {
             setStep(1); // Allow going back to see all services even if pre-skipped
         } else {
             setStep(s => s - 1);
+        }
+    };
+
+    const handleTimeSelect = async (time: string) => {
+        setSelectedTime(time);
+        setFetchingProfs(true);
+        try {
+            const profs = await api.publicGetSlots(salonId!, selectedDate, time);
+            setAvailableProfessionals(profs);
+
+            // AUTO-SKIP Step 3 if only 1 professional is available
+            if (profs && profs.length === 1) {
+                setSelectedProfessional(profs[0]);
+                setStep(4); // Skip to Identity Choice
+            } else {
+                setStep(3);
+            }
+        } catch (e) {
+            alert('Erro ao carregar profissionais.');
+        } finally {
+            setFetchingProfs(false);
         }
     };
 
@@ -152,13 +179,15 @@ export default function BookingPublicPage() {
 
             <main className="flex-1 max-w-2xl mx-auto w-full p-4 pb-20">
 
-                {/* Step Progress - Compressed if service pre-selected */}
+                {/* Step Progress - Compressed if steps are skipped */}
                 {step < 6 && (
                     <div className="flex gap-2 mb-8">
                         {[1, 2, 3, 4, 5].map(s => {
-                            // If Step 1 was skipped, we still show the bar but it's always "full"
-                            const isHidden = s === 1 && initialQuery && selectedService;
-                            if (isHidden) return null;
+                            // Hide steps that are irrelevant due to pre-selection or auto-skip
+                            const isServiceStepSkipped = s === 1 && initialQuery && selectedService;
+                            const isProfStepSkipped = s === 3 && availableProfessionals.length === 1 && selectedProfessional;
+
+                            if (isServiceStepSkipped || isProfStepSkipped) return null;
 
                             return (
                                 <div key={s} className={clsx("h-1.5 flex-1 rounded-full bg-gray-200 overflow-hidden")}>
@@ -214,25 +243,34 @@ export default function BookingPublicPage() {
                             className="w-full bg-white p-4 rounded-2xl border border-gray-200 outline-none focus:ring-2 focus:ring-purple-400 font-bold"
                         />
 
-                        <div className="grid grid-cols-3 gap-2">
-                            {availableSlots.map(time => (
-                                <button
-                                    key={time}
-                                    onClick={async () => {
-                                        setSelectedTime(time);
-                                        const profs = await api.publicGetSlots(salonId!, selectedDate, time);
-                                        setAvailableProfessionals(profs);
-                                        handleNext();
-                                    }}
-                                    className={clsx(
-                                        "py-4 rounded-2xl font-bold transition-all text-sm",
-                                        selectedTime === time ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 border border-gray-100'
-                                    )}
-                                >
-                                    {time}
-                                </button>
-                            ))}
-                        </div>
+                        {fetchingSlots ? (
+                            <div className="flex flex-col items-center py-12 text-gray-400 gap-3">
+                                <Loader2 className="animate-spin text-purple-600" />
+                                <p className="text-sm font-medium">Buscando horários disponíveis...</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-3 gap-2">
+                                {availableSlots.map(time => (
+                                    <button
+                                        key={time}
+                                        disabled={fetchingProfs}
+                                        onClick={() => handleTimeSelect(time)}
+                                        className={clsx(
+                                            "py-4 rounded-2xl font-bold transition-all text-sm flex items-center justify-center",
+                                            selectedTime === time ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 border border-gray-100',
+                                            fetchingProfs && selectedTime === time && "opacity-50"
+                                        )}
+                                    >
+                                        {fetchingProfs && selectedTime === time ? <Loader2 size={16} className="animate-spin" /> : time}
+                                    </button>
+                                ))}
+                                {availableSlots.length === 0 && (
+                                    <div className="col-span-3 text-center py-8 text-gray-400 text-sm italic">
+                                        Nenhum horário disponível para esta data.
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
 
