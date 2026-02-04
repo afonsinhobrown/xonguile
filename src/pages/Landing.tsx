@@ -1,10 +1,30 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
-import { ArrowRight, Star, Scissors, Calendar, ShieldCheck, CheckCircle2, Menu, CheckCircle } from 'lucide-react';
+import { ArrowRight, Star, Scissors, Calendar, ShieldCheck, CheckCircle2, Menu, CheckCircle, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useState, useEffect } from 'react';
+import { api } from '../lib/api';
 
 export default function LandingPage() {
     const navigate = useNavigate();
+    const [featuredSalon, setFeaturedSalon] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        api.publicListSalons().then(salons => {
+            if (salons && salons.length > 0) {
+                // Get a random salon or the first one as featured
+                const random = salons[Math.floor(Math.random() * salons.length)];
+                // Fetch full details including services
+                api.publicGetSalon(random.id).then(fullData => {
+                    setFeaturedSalon(fullData);
+                    setLoading(false);
+                });
+            } else {
+                setLoading(false);
+            }
+        }).catch(() => setLoading(false));
+    }, []);
 
     return (
         <div className="min-h-screen font-sans bg-white text-gray-900 selection:bg-purple-200 selection:text-purple-900">
@@ -102,38 +122,48 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    {/* Right Side: Floating App Preview or Abstract Art */}
-                    <div className="hidden lg:block relative">
-                        <div className="relative z-10 bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-3xl shadow-2xl transform rotate-3 hover:rotate-0 transition-all duration-700">
-                            <div className="flex items-center justify-between mb-6">
-                                <div>
-                                    <p className="text-gray-400 text-xs uppercase tracking-wider">Parceiro Destaque</p>
-                                    <h3 className="text-white text-2xl font-bold">Angi-Arte Cabeleireiros</h3>
+                    {/* Right Side: Dynamic Partner Card */}
+                    <div className="hidden lg:block relative min-h-[400px]">
+                        {loading ? (
+                            <div className="flex items-center justify-center h-full">
+                                <Loader2 className="animate-spin text-purple-400" size={48} />
+                            </div>
+                        ) : featuredSalon ? (
+                            <div className="relative z-10 bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-3xl shadow-2xl transform rotate-3 hover:rotate-0 transition-all duration-700">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div>
+                                        <p className="text-gray-400 text-xs uppercase tracking-wider">Parceiro Destaque</p>
+                                        <h3 className="text-white text-2xl font-bold">{featuredSalon.name}</h3>
+                                    </div>
+                                    <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-300">
+                                        <Scissors />
+                                    </div>
                                 </div>
-                                <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-300">
-                                    <Scissors />
+                                <div className="space-y-4">
+                                    {featuredSalon.Services?.slice(0, 2).map((s: any) => (
+                                        <div key={s.id} className="bg-white/5 p-4 rounded-xl border border-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                                            <div className="flex justify-between items-center text-white">
+                                                <span>{s.name}</span>
+                                                <span className="font-bold">{s.price} MT</span>
+                                            </div>
+                                            <p className="text-gray-400 text-xs mt-1">{s.duration} min</p>
+                                        </div>
+                                    ))}
+                                    <Link
+                                        to={`/agendar/${featuredSalon.id}`}
+                                        className="block bg-purple-600 p-4 rounded-xl text-center text-white font-bold cursor-pointer hover:bg-purple-500 transition-colors"
+                                    >
+                                        Agendar Horário
+                                    </Link>
                                 </div>
                             </div>
-                            <div className="space-y-4">
-                                <div className="bg-white/5 p-4 rounded-xl border border-white/5 hover:bg-white/10 transition-colors cursor-pointer">
-                                    <div className="flex justify-between items-center text-white">
-                                        <span>Tratamento Mussiro Real</span>
-                                        <span className="font-bold">800 MT</span>
-                                    </div>
-                                    <p className="text-gray-400 text-xs mt-1">45 min • Facial</p>
-                                </div>
-                                <div className="bg-white/5 p-4 rounded-xl border border-white/5 hover:bg-white/10 transition-colors cursor-pointer">
-                                    <div className="flex justify-between items-center text-white">
-                                        <span>Tranças Box Braids</span>
-                                        <span className="font-bold">2500 MT</span>
-                                    </div>
-                                    <p className="text-gray-400 text-xs mt-1">3h • Cabelo</p>
-                                </div>
-                                <div className="bg-purple-600 p-4 rounded-xl text-center text-white font-bold cursor-pointer hover:bg-purple-500 transition-colors">
-                                    Agendar Horário
-                                </div>
+                        ) : (
+                            <div className="relative z-10 bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-3xl shadow-2xl text-center">
+                                <SparklesIcon className="mx-auto text-purple-400 mb-4" />
+                                <h3 className="text-white font-bold text-xl">Xonguile App</h3>
+                                <p className="text-gray-400 text-sm mt-2">Agende os melhores profissionais de Moçambique num só clique.</p>
                             </div>
-                        </div>
+                        )}
 
                         {/* Decorative Elements */}
                         <div className="absolute -top-10 -right-10 w-32 h-32 bg-pink-500 rounded-full blur-[80px] opacity-40"></div>
@@ -277,4 +307,16 @@ function LandingPlanCard({ name, price, annual, features, highlight }: any) {
             </Link>
         </div>
     );
+}
+
+function SparklesIcon({ className }: { className?: string }) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+            <path d="M5 3v4" />
+            <path d="M19 17v4" />
+            <path d="M3 5h4" />
+            <path d="M17 19h4" />
+        </svg>
+    )
 }
