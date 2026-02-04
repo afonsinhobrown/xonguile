@@ -601,36 +601,40 @@ app.listen(PORT, async () => {
         await sequelize.sync();
         console.log('Database Synced.');
 
-        // Bootstrap default salon if empty
-        const count = await Salon.count();
-        if (count === 0) {
-            console.log("Creating Official Admin Tenant...");
-            const salon = await Salon.create({ name: 'Xonguile App Admin', slug: 'admin' });
+        // Ensure Master Admin exists regardless of salons
+        const [adminSalon] = await Salon.findOrCreate({
+            where: { slug: 'admin' },
+            defaults: { name: 'Xonguile App Admin' }
+        });
 
-            // 10-Day Trial (No lifetime)
-            const validUntil = new Date();
-            validUntil.setDate(validUntil.getDate() + 10);
-
-            await License.create({
-                key: 'XONGUILE-ADMIN-TRIAL',
-                type: 'trial',
-                status: 'active',
-                validUntil: validUntil,
-                bookingLimit: 999999,
-                hasWaitingList: true,
-                reportLevel: 3,
-                SalonId: salon.id
-            });
-
-            // Criar Admin do Sistema (Independente de Salão em termos de permissão)
-            await User.create({
+        const [masterUser, created] = await User.findOrCreate({
+            where: { email: 'encubadoradesolucoes@gmail.com' },
+            defaults: {
                 name: 'Afonsinho Brown',
-                email: 'encubadoradesolucoes@gmail.com',
                 password: '123',
-                role: 'super_level_1', // MASTER
-                SalonId: salon.id
+                role: 'super_level_1',
+                SalonId: adminSalon.id
+            }
+        });
+
+        if (created) {
+            console.log("✅ MASTER USER CREATED: encubadoradesolucoes@gmail.com / 123");
+
+            // Create license for admin salon
+            const validUntil = new Date();
+            validUntil.setFullYear(validUntil.getFullYear() + 10);
+            await License.findOrCreate({
+                where: { SalonId: adminSalon.id },
+                defaults: {
+                    key: 'XONGUILE-ADMIN-MASTER-KEY',
+                    type: 'premium_year',
+                    status: 'active',
+                    validUntil: validUntil,
+                    bookingLimit: 999999,
+                    hasWaitingList: true,
+                    reportLevel: 3
+                }
             });
-            console.log("XONGUILE MASTER CREATED: encubadoradesolucoes@gmail.com / 123");
         }
     } catch (error) {
         console.error('DB Connection Error:', error);
