@@ -115,8 +115,14 @@ export const api = {
         return fetch(`${API_URL}/public/client-lookup?${query}`).then(res => res.json());
     },
     publicBook: async (data: any) => fetch(`${API_URL}/public/book-appointment`, {
-        method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' }
-    }).then(res => res.json()),
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+    }).then(async res => {
+        const result = await res.json();
+        if (!res.ok) throw result;
+        return result;
+    }),
 
     // Subscriptions
     activateSubscription: async (salonId: number, type: string) => fetch(`${API_URL}/subscription/activate`, {

@@ -1,41 +1,13 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
-import {
-    Scissors, Calendar, Clock, User, CheckCircle, ArrowLeft,
-    ArrowRight, Loader2, CreditCard, Download, Mail, Smartphone,
-    UserCheck, AlertCircle
-} from 'lucide-react';
+import { Scissors, CheckCircle, ArrowLeft, Loader2, CreditCard, Download, User, UserCheck } from 'lucide-react';
 import { DateTime } from 'luxon';
 import { clsx } from 'clsx';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useRef } from 'react';
-
-const printStyles = `
-@media print {
-  nav, header, button, .no-print, .floating-summary {
-    display: none !important;
-  }
-  body {
-    background: white !important;
-  }
-  .print-only {
-    display: block !important;
-  }
-  .receipt-card {
-    border: 2px solid #f3f4f6 !important;
-    box-shadow: none !important;
-    margin: 0 !important;
-    padding: 2rem !important;
-    width: 100% !important;
-    border-radius: 0 !important;
-  }
-}
-.print-only { display: none; }
-`;
 
 export default function BookingPublicPage() {
     const { salonId } = useParams();
@@ -48,7 +20,6 @@ export default function BookingPublicPage() {
     const [salon, setSalon] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
-    // Booking State
     const [selectedService, setSelectedService] = useState<any>(null);
     const [selectedDate, setSelectedDate] = useState(DateTime.now().toISODate());
     const [selectedTime, setSelectedTime] = useState('');
@@ -58,27 +29,18 @@ export default function BookingPublicPage() {
     const [fetchingProfs, setFetchingProfs] = useState(false);
     const [selectedProfessional, setSelectedProfessional] = useState<any>(null);
 
-    // Client State
     const [hasCard, setHasCard] = useState<boolean | null>(null);
     const [xonguileId, setXonguileId] = useState('');
     const [idVerified, setIdVerified] = useState(false);
-    const [clientData, setClientData] = useState({
-        name: '',
-        phone: '',
-        email: ''
-    });
+    const [clientData, setClientData] = useState({ name: '', phone: '', email: '' });
 
     const [result, setResult] = useState<any>(null);
     const [isBooking, setIsBooking] = useState(false);
 
-    // Filtered Services based on search query
     const filteredServices = useMemo(() => {
         if (!salon?.Services) return [];
         if (!initialQuery) return salon.Services;
-        const q = initialQuery.toLowerCase();
-        return salon.Services.filter((s: any) =>
-            s.name.toLowerCase().includes(q)
-        );
+        return salon.Services.filter((s: any) => s.name.toLowerCase().includes(initialQuery.toLowerCase()));
     }, [salon, initialQuery]);
 
     useEffect(() => {
@@ -86,16 +48,9 @@ export default function BookingPublicPage() {
             api.publicGetSalon(salonId).then(data => {
                 setSalon(data);
                 setLoading(false);
-
-                // If there's a search term and it narrows down to 1 service, auto-select it
                 if (initialQuery && data.Services) {
-                    const matches = data.Services.filter((s: any) =>
-                        s.name.toLowerCase().includes(initialQuery.toLowerCase())
-                    );
-                    if (matches.length === 1) {
-                        setSelectedService(matches[0]);
-                        setStep(2); // Skip Step 1 (Service Selection)
-                    }
+                    const matches = data.Services.filter((s: any) => s.name.toLowerCase().includes(initialQuery.toLowerCase()));
+                    if (matches.length === 1) { setSelectedService(matches[0]); setStep(2); }
                 }
             });
         }
@@ -112,13 +67,7 @@ export default function BookingPublicPage() {
     }, [salonId, selectedDate, step]);
 
     const handleNext = () => setStep(s => s + 1);
-    const handleBack = () => {
-        if (step === 2 && selectedService && initialQuery) {
-            setStep(1); // Allow going back to see all services even if pre-skipped
-        } else {
-            setStep(s => s - 1);
-        }
-    };
+    const handleBack = () => step === 2 && selectedService && initialQuery ? setStep(1) : setStep(s => s - 1);
 
     const handleTimeSelect = async (time: string) => {
         setSelectedTime(time);
@@ -126,177 +75,132 @@ export default function BookingPublicPage() {
         try {
             const profs = await api.publicGetSlots(salonId!, selectedDate, time);
             setAvailableProfessionals(profs);
-
-            // AUTO-SKIP Step 3 if only 1 professional is available
-            if (profs && profs.length === 1) {
-                setSelectedProfessional(profs[0]);
-                setStep(4); // Skip to Identity Choice
-            } else {
-                setStep(3);
-            }
-        } catch (e) {
-            alert('Erro ao carregar profissionais.');
-        } finally {
-            setFetchingProfs(false);
-        }
+            if (profs && profs.length === 1) { setSelectedProfessional(profs[0]); setStep(4); } else { setStep(3); }
+        } catch (e) { alert('Erro ao carregar profissionais.'); } finally { setFetchingProfs(false); }
     };
 
     const handleClientLookup = async () => {
         if (!xonguileId) return;
         setLoading(true);
         try {
-            // Global Lookup: A single person is a client of all salons in the ecosystem
             const data = await api.publicClientLookup({ xonguileId });
-            if (data) {
-                setClientData({ name: data.name, phone: data.phone, email: data.email });
-                setIdVerified(true);
-                // Proceed directly to booking confirmation logic
-            } else {
-                alert('ID Xonguile não encontrado. Verifique se digitou corretamente.');
-            }
-        } catch (e) {
-            alert('Erro ao buscar ID. Tente novamente.');
-        } finally {
-            setLoading(false);
-        }
+            if (data) { setClientData({ name: data.name, phone: data.phone, email: data.email || '' }); setIdVerified(true); }
+            else { alert('ID Xonguile não encontrado.'); }
+        } catch (e) { alert('Erro ao buscar ID.'); } finally { setLoading(false); }
     };
 
     const handleFinalize = async () => {
-        if (!selectedService || !selectedDate || !selectedTime) return alert('Por favor, selecione todos os dados.');
+        if (!selectedService || !selectedTime) return alert('Selecione todos os dados.');
         setIsBooking(true);
         try {
-            // Sanitize payload to avoid undefined fields which can trigger 400
-            const finalClientData: any = {
-                name: clientData.name,
-                phone: clientData.phone,
-                email: clientData.email || ''
+            const clientPayload: any = {
+                name: String(clientData.name).trim(),
+                phone: String(clientData.phone).trim()
             };
-            if (hasCard || idVerified) {
-                finalClientData.xonguileId = xonguileId;
-            }
+            if (clientData.email && clientData.email.includes('@')) clientPayload.email = clientData.email.trim();
+            if ((hasCard || idVerified) && xonguileId) clientPayload.xonguileId = xonguileId.trim();
 
-            const data = {
+            const payload: any = {
                 salonId: parseInt(salonId!),
-                serviceId: selectedService.id,
+                serviceId: parseInt(selectedService.id),
                 date: selectedDate,
                 time: selectedTime,
-                professionalId: selectedProfessional?.id,
-                clientData: finalClientData
+                clientData: clientPayload
             };
-            const res = await api.publicBook(data);
+            if (selectedProfessional) payload.professionalId = parseInt(selectedProfessional.id);
+
+            const res = await api.publicBook(payload);
             setResult(res);
             setStep(6);
         } catch (e: any) {
-            console.error('Erro no agendamento:', e);
-            alert(e.error || 'Falha ao agendar. Verifique se todos os campos estão preenchidos corretamente.');
-        } finally {
-            setIsBooking(false);
-        }
+            console.error('API Error:', e);
+            const msg = e.error || e.message || 'Erro no servidor (400). Verifique se preencheu tudo corretamente.';
+            alert(`Atenção: ${msg}`);
+        } finally { setIsBooking(false); }
     };
 
     const handleDownloadPDF = async () => {
-        if (!ticketRef.current) return;
+        if (!ticketRef.current || !result) return;
         setLoading(true);
-        // Give the browser a moment to ensure all styles and external images (QR) are painted
+
         setTimeout(async () => {
             try {
                 const element = ticketRef.current!;
                 const canvas = await html2canvas(element, {
-                    scale: 2, // Optimized for mobile memory
+                    scale: 3,
                     useCORS: true,
-                    allowTaint: true,
+                    logging: false,
                     backgroundColor: '#ffffff',
-                    logging: false
+                    onclone: (clonedDoc) => {
+                        // THE ATOMIC FIX: Remove all OKLCH color functions from all stylesheets in the clone
+                        const styleSheets = clonedDoc.styleSheets;
+                        for (let i = 0; i < styleSheets.length; i++) {
+                            try {
+                                const sheet = styleSheets[i];
+                                const rules = sheet.cssRules || sheet.rules;
+                                for (let j = 0; j < rules.length; j++) {
+                                    const rule = rules[j] as CSSStyleRule;
+                                    if (rule.style && rule.style.cssText) {
+                                        // Replace oklch() with a fallback hex color in the entire CSS rule string
+                                        if (rule.style.cssText.includes('oklch')) {
+                                            rule.style.cssText = rule.style.cssText.replace(/oklch\([^)]+\)/g, '#9333ea');
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                // Some stylesheets are cross-origin and can't be read, but that's okay
+                            }
+                        }
+                    }
                 });
 
-                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                const imgData = canvas.toDataURL('image/png', 1.0);
                 const pdf = new jsPDF('p', 'mm', 'a4');
-
                 const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const ticketWidthOnPdf = 130;
+                const ticketHeightOnPdf = (canvas.height * ticketWidthOnPdf) / canvas.width;
+                const x = (pdfWidth - ticketWidthOnPdf) / 2;
 
-                // Calculate dimensions to fit the ticket nicely in the PDF page
-                const canvasWidth = canvas.width;
-                const canvasHeight = canvas.height;
-                const ratio = canvasWidth / pdfWidth;
-                const finalHeight = (canvasHeight / ratio);
-
-                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, finalHeight);
-                pdf.save(`Reserva_Xonguile_XON-${result?.id?.toString().padStart(4, '0')}.pdf`);
-            } catch (e) {
-                console.error('Erro ao gerar PDF:', e);
-                alert('Ocorreu um problema ao gerar o PDF. Pode tentar tirar um print ou usar a função Imprimir do sistema.');
-            } finally {
-                setLoading(false);
-            }
+                pdf.addImage(imgData, 'PNG', x, 15, ticketWidthOnPdf, ticketHeightOnPdf);
+                pdf.save(`Ticket_Xonguile_${result.id}.pdf`);
+            } catch (e: any) {
+                console.error('PDF Error:', e);
+                alert('Erro ao gerar PDF: ' + e.message);
+            } finally { setLoading(false); }
         }, 500);
     };
 
-    if (loading && step === 1) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-purple-600" size={48} /></div>;
+    if (loading && step === 1) return <div className="min-h-screen flex items-center justify-center bg-white"><Loader2 className="animate-spin text-purple-600" size={40} /></div>;
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
-            <style>{printStyles}</style>
-            {/* Nav */}
-            <header className="bg-white border-b border-gray-200 p-4 sticky top-0 z-10">
+        <div className="min-h-screen bg-gray-50 flex flex-col font-sans" style={{ color: '#111827' }}>
+            <header className="bg-white border-b border-gray-100 p-4 sticky top-0 z-20 no-print">
                 <div className="max-w-2xl mx-auto flex items-center justify-between">
-                    <button onClick={() => step > 1 ? handleBack() : navigate('/explorar')} className="p-2 hover:bg-gray-100 rounded-full">
-                        <ArrowLeft size={20} />
-                    </button>
+                    <button onClick={() => step > 1 ? handleBack() : navigate('/explorar')} className="p-2 hover:bg-gray-100 rounded-xl transition-colors"><ArrowLeft size={18} /></button>
                     <div className="text-center">
-                        <h2 className="font-bold text-gray-800">{salon?.name || 'Carregando...'}</h2>
-                        <p className="text-[10px] text-gray-400 uppercase tracking-widest">Agendamento Online</p>
+                        <h2 className="font-bold text-gray-900 text-sm leading-tight uppercase tracking-tight">{salon?.name || 'Agendamento'}</h2>
+                        <span className="text-[9px] font-black text-purple-600 uppercase tracking-widest block">Xonguile Partner</span>
                     </div>
                     <div className="w-10"></div>
                 </div>
             </header>
 
-            <main className="flex-1 max-w-2xl mx-auto w-full p-4 pb-20">
-
-                {/* Step Progress - Compressed if steps are skipped */}
+            <main className="flex-1 max-w-2xl mx-auto w-full p-4 pb-32">
                 {step < 6 && (
-                    <div className="flex gap-2 mb-8">
-                        {[1, 2, 3, 4, 5].map(s => {
-                            // Hide steps that are irrelevant due to pre-selection or auto-skip
-                            const isServiceStepSkipped = s === 1 && initialQuery && selectedService;
-                            const isProfStepSkipped = s === 3 && availableProfessionals.length === 1 && selectedProfessional;
-
-                            if (isServiceStepSkipped || isProfStepSkipped) return null;
-
-                            return (
-                                <div key={s} className={clsx("h-1.5 flex-1 rounded-full bg-gray-200 overflow-hidden")}>
-                                    <div className={clsx("h-full bg-purple-600 transition-all duration-500", s <= step ? 'w-full' : 'w-0')}></div>
-                                </div>
-                            );
-                        })}
+                    <div className="flex gap-2 mb-8 no-print">
+                        {[1, 2, 3, 4, 5].map(s => <div key={s} className="h-1.5 flex-1 rounded-full bg-gray-200 overflow-hidden"><div className={clsx("h-full bg-purple-600 transition-all", s <= step ? 'w-full' : 'w-0')}></div></div>)}
                     </div>
                 )}
 
-                {/* STEP 1: SERVICES (Hidden if skipped) */}
                 {step === 1 && (
-                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-2xl font-bold text-gray-800">Escolha o serviço</h3>
-                            {initialQuery && (
-                                <button onClick={() => navigate(`/agendar/${salonId}`)} className="text-xs text-purple-600 font-bold">Ver Todos</button>
-                            )}
-                        </div>
+                    <div className="space-y-4">
+                        <h3 className="text-2xl font-black text-gray-900">Selecione o Serviço</h3>
                         <div className="grid gap-3">
                             {filteredServices.map((s: any) => (
-                                <button
-                                    key={s.id}
-                                    onClick={() => { setSelectedService(s); handleNext(); }}
-                                    className={clsx(
-                                        "p-4 rounded-2xl border text-left transition-all",
-                                        selectedService?.id === s.id ? 'border-purple-600 bg-purple-50' : 'border-gray-200 bg-white hover:border-purple-300'
-                                    )}
-                                >
+                                <button key={s.id} onClick={() => { setSelectedService(s); handleNext(); }} className={clsx("p-5 rounded-[2rem] border-2 text-left bg-white transition-all shadow-sm", selectedService?.id === s.id ? 'border-purple-600' : 'border-transparent')}>
                                     <div className="flex justify-between items-center">
-                                        <div>
-                                            <p className="font-bold text-gray-800">{s.name}</p>
-                                            <p className="text-xs text-gray-500">{s.duration} min</p>
-                                        </div>
-                                        <p className="font-bold text-purple-600">MZN {s.price}</p>
+                                        <div><p className="font-bold text-gray-900">{s.name}</p><p className="text-xs text-gray-500">{s.duration} min</p></div>
+                                        <p className="font-black text-purple-600">MZN {s.price}</p>
                                     </div>
                                 </button>
                             ))}
@@ -304,301 +208,176 @@ export default function BookingPublicPage() {
                     </div>
                 )}
 
-                {/* STEP 2: DATE & TIME */}
                 {step === 2 && (
                     <div className="space-y-6">
-                        <h3 className="text-2xl font-bold text-gray-800">Dia e Hora</h3>
-
-                        <input
-                            type="date"
-                            min={DateTime.now().toISODate()}
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            className="w-full bg-white p-4 rounded-2xl border border-gray-200 outline-none focus:ring-2 focus:ring-purple-400 font-bold"
-                        />
-
-                        {fetchingSlots ? (
-                            <div className="flex flex-col items-center py-12 text-gray-400 gap-3">
-                                <Loader2 className="animate-spin text-purple-600" />
-                                <p className="text-sm font-medium">Buscando horários disponíveis...</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-3 gap-2">
+                        <h3 className="text-2xl font-black text-gray-900">Data e Hora</h3>
+                        <input type="date" min={DateTime.now().toISODate()} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full bg-white p-5 rounded-[2rem] shadow-sm outline-none border-none font-bold text-lg" />
+                        {fetchingSlots ? <div className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-purple-600" /></div> : (
+                            <div className="grid grid-cols-3 gap-3">
                                 {availableSlots.map(time => (
-                                    <button
-                                        key={time}
-                                        disabled={fetchingProfs}
-                                        onClick={() => handleTimeSelect(time)}
-                                        className={clsx(
-                                            "py-4 rounded-2xl font-bold transition-all text-sm flex items-center justify-center",
-                                            selectedTime === time ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 border border-gray-100',
-                                            fetchingProfs && selectedTime === time && "opacity-50"
-                                        )}
-                                    >
-                                        {fetchingProfs && selectedTime === time ? <Loader2 size={16} className="animate-spin" /> : time}
+                                    <button key={time} onClick={() => handleTimeSelect(time)} className={clsx("py-4 rounded-2xl font-bold transition-all text-sm", selectedTime === time ? 'bg-purple-600 text-white shadow-lg' : 'bg-white text-gray-700 hover:bg-purple-50')}>
+                                        {time}
                                     </button>
                                 ))}
-                                {availableSlots.length === 0 && (
-                                    <div className="col-span-3 text-center py-8 text-gray-400 text-sm italic">
-                                        Nenhum horário disponível para esta data.
-                                    </div>
-                                )}
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* STEP 3: SELECT PROFESSIONAL */}
                 {step === 3 && (
                     <div className="space-y-6">
-                        <h3 className="text-2xl font-bold text-gray-800">Escolha o Profissional</h3>
+                        <h3 className="text-2xl font-black text-gray-900">Escolha o Profissional</h3>
                         <div className="grid gap-3">
                             {availableProfessionals.map(p => (
-                                <button
-                                    key={p.id}
-                                    onClick={() => { setSelectedProfessional(p); handleNext(); }}
-                                    className={clsx(
-                                        "p-4 rounded-2xl border flex items-center gap-4 text-left transition-all",
-                                        selectedProfessional?.id === p.id ? 'border-purple-600 bg-purple-50' : 'border-gray-200 bg-white'
-                                    )}
-                                >
-                                    <div className={clsx("w-12 h-12 rounded-full flex items-center justify-center font-bold text-white", p.color)}>
-                                        {p.name[0]}
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-gray-800">{p.name}</p>
-                                        <p className="text-xs text-gray-500">{p.role}</p>
-                                    </div>
+                                <button key={p.id} onClick={() => { setSelectedProfessional(p); handleNext(); }} className={clsx("p-5 rounded-[2.5rem] bg-white border-2 flex items-center gap-4 text-left shadow-sm", selectedProfessional?.id === p.id ? 'border-purple-600' : 'border-transparent')}>
+                                    <div className={clsx("w-14 h-14 rounded-2xl flex items-center justify-center font-black text-white text-xl", p.color || 'bg-purple-600')}>{p.name[0]}</div>
+                                    <div><p className="font-bold text-gray-900 text-lg">{p.name}</p><p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{p.role}</p></div>
                                 </button>
                             ))}
                         </div>
                     </div>
                 )}
 
-                {/* STEP 4: IDENTITY CHOICE */}
                 {step === 4 && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                        <h3 className="text-2xl font-bold text-gray-800">Agora, quem é você?</h3>
-                        <p className="text-gray-500">Seu agendamento em Moçambique será unificado com seu Cartão Xonguile.</p>
-
+                    <div className="space-y-6">
+                        <h3 className="text-2xl font-black text-gray-900 mb-8 tracking-tight">Identificação Digital</h3>
                         <div className="grid gap-4">
-                            <button
-                                onClick={() => { setHasCard(true); handleNext(); }}
-                                className="p-6 rounded-3xl bg-white border border-gray-200 hover:border-purple-400 text-left group transition-all shadow-sm"
-                            >
-                                <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 mb-4 transition-colors group-hover:bg-purple-600 group-hover:text-white">
-                                    <CreditCard size={24} />
-                                </div>
-                                <h4 className="font-bold text-lg text-gray-800">Tenho Cartão Xonguile</h4>
-                                <p className="text-sm text-gray-500">Usar meu ID digital (Global) para carregar meus dados.</p>
+                            <button onClick={() => { setHasCard(true); handleNext(); }} className="p-8 rounded-[2.5rem] bg-white text-left shadow-sm border border-gray-50 flex items-center gap-5 group transition-all">
+                                <div className="w-14 h-14 bg-purple-50 group-hover:bg-purple-600 group-hover:text-white rounded-2xl flex items-center justify-center text-purple-600 transition-all"><CreditCard size={28} /></div>
+                                <div><h4 className="font-black text-xl text-gray-900">Tenho Xonguile ID</h4><p className="text-sm text-gray-500">Recuperar meus dados</p></div>
                             </button>
-
-                            <button
-                                onClick={() => { setHasCard(false); handleNext(); }}
-                                className="p-6 rounded-3xl bg-white border border-gray-200 hover:border-purple-400 text-left group transition-all shadow-sm"
-                            >
-                                <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-600 mb-4 transition-colors group-hover:bg-purple-600 group-hover:text-white">
-                                    <User size={24} />
-                                </div>
-                                <h4 className="font-bold text-lg text-gray-800">Não tenho cartão / Sou novo</h4>
-                                <p className="text-sm text-gray-500">Preencha os dados uma vez para ser agendado em qualquer lugar.</p>
+                            <button onClick={() => { setHasCard(false); handleNext(); }} className="p-8 rounded-[2.5rem] bg-white text-left shadow-sm border border-gray-50 flex items-center gap-5 group transition-all">
+                                <div className="w-14 h-14 bg-gray-50 group-hover:bg-purple-600 group-hover:text-white rounded-2xl flex items-center justify-center text-gray-600 transition-all"><User size={28} /></div>
+                                <div><h4 className="font-black text-xl text-gray-900">Sou nova / Sem ID</h4><p className="text-sm text-gray-500">Criar no momento</p></div>
                             </button>
                         </div>
                     </div>
                 )}
 
-                {/* STEP 5: FORM / ID INPUT */}
                 {step === 5 && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                    <div className="space-y-6">
                         {hasCard ? (
-                            <div className="space-y-6">
+                            <div className="space-y-4">
                                 {!idVerified ? (
-                                    <div className="space-y-4">
-                                        <h3 className="text-2xl font-bold text-gray-800">Digite seu ID Xonguile</h3>
-                                        <p className="text-sm text-gray-500">Este ID é válido em qualquer salão ou parceiro da rede Xonguile.</p>
-                                        <Input
-                                            label="ID do Cartão"
-                                            placeholder="Ex: XON-N5UZ2F"
-                                            value={xonguileId}
-                                            onChange={(e: any) => setXonguileId(e.target.value)}
-                                        />
-                                        <Button className="w-full py-4 text-lg font-bold" onClick={handleClientLookup} disabled={loading}>
-                                            {loading ? <Loader2 className="animate-spin" /> : 'Verificar ID'}
-                                        </Button>
-                                    </div>
+                                    <>
+                                        <h3 className="text-2xl font-black text-gray-900">Carteira Digital</h3>
+                                        <Input label="Seu ID Xonguile" placeholder="Ex: XON-N5UZ2F" value={xonguileId} onChange={(e: any) => setXonguileId(e.target.value)} />
+                                        <Button className="w-full py-5 rounded-3xl text-lg font-black bg-purple-600 text-white" onClick={handleClientLookup} disabled={loading}>{loading ? <Loader2 className="animate-spin" /> : 'Validar Identidade'}</Button>
+                                    </>
                                 ) : (
-                                    <div className="space-y-6">
-                                        <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-3xl flex flex-col items-center text-center">
-                                            <div className="w-16 h-16 bg-emerald-500 text-white rounded-full flex items-center justify-center mb-4 shadow-lg">
-                                                <UserCheck size={32} />
-                                            </div>
-                                            <h3 className="text-xl font-bold text-emerald-900">ID Identificado!</h3>
-                                            <p className="text-emerald-700 font-medium">{clientData.name}</p>
-                                            <p className="text-xs text-emerald-600 mt-1">{clientData.phone}</p>
+                                    <>
+                                        <div className="bg-green-50 p-10 rounded-[2.5rem] text-center border-2 border-green-100 animate-in zoom-in">
+                                            <div className="w-20 h-20 bg-green-500 text-white rounded-3xl flex items-center justify-center mb-5 mx-auto shadow-lg shadow-green-200"><UserCheck size={40} /></div>
+                                            <h4 className="text-xl font-black text-green-900">Bem-vinda, {clientData.name.split(' ')[0]}!</h4>
+                                            <p className="text-green-700 font-bold mt-1">{clientData.name}</p>
                                         </div>
-
-                                        <Button className="w-full py-4 text-lg font-bold" onClick={handleFinalize} disabled={isBooking}>
-                                            {isBooking ? <Loader2 className="animate-spin" /> : 'Finalizar Agendamento'}
-                                        </Button>
-
-                                        <button onClick={() => { setIdVerified(false); setClientData({ name: '', phone: '', email: '' }); }} className="flex items-center gap-2 text-gray-400 text-sm mx-auto font-medium">
-                                            <AlertCircle size={14} /> Não é você? Trocar ID
-                                        </button>
-                                    </div>
+                                        <Button className="w-full py-5 rounded-[2.5rem] text-lg font-black shadow-xl shadow-purple-600/20 bg-purple-600 text-white" onClick={handleFinalize} disabled={isBooking}>{isBooking ? <Loader2 className="animate-spin" /> : 'Confirmar Reserva'}</Button>
+                                    </>
                                 )}
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                <h3 className="text-2xl font-bold text-gray-800">Seus Dados</h3>
-                                <Input label="Nome Completo" value={clientData.name} onChange={(e: any) => setClientData({ ...clientData, name: e.target.value })} required placeholder="Como devemos te chamar?" />
-                                <Input label="Telemóvel" value={clientData.phone} onChange={(e: any) => setClientData({ ...clientData, phone: e.target.value })} required placeholder="84 XXXXXXXX" />
-                                <Input label="Email" value={clientData.email} onChange={(e: any) => setClientData({ ...clientData, email: e.target.value })} placeholder="Para receber lembretes" />
-
-                                <div className="pt-4">
-                                    <Button className="w-full py-4 text-lg font-bold" onClick={handleFinalize} disabled={isBooking}>
-                                        {isBooking ? <Loader2 className="animate-spin" /> : 'Confirmar Agendamento'}
-                                    </Button>
-                                    <p className="text-[10px] text-gray-400 text-center mt-3">Sua conta será criada globalmente para uso em outros parceiros.</p>
+                                <h3 className="text-2xl font-black text-gray-900">Dados de Reserva</h3>
+                                <div className="space-y-3">
+                                    <Input label="Nome Completo" value={clientData.name} onChange={(e: any) => setClientData({ ...clientData, name: e.target.value })} required />
+                                    <Input label="Telemóvel" value={clientData.phone} onChange={(e: any) => setClientData({ ...clientData, phone: e.target.value })} required />
+                                    <Input label="Email (Opcional)" value={clientData.email} onChange={(e: any) => setClientData({ ...clientData, email: e.target.value })} />
                                 </div>
+                                <Button className="w-full py-5 rounded-[2.5rem] text-lg font-black mt-6 bg-purple-600 text-white shadow-lg" onClick={handleFinalize} disabled={isBooking}>{isBooking ? <Loader2 className="animate-spin" /> : 'Concluir Agendamento'}</Button>
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* STEP 6: SUCCESS / RECEIPT / TICKET */}
                 {step === 6 && (
-                    <div className="text-center space-y-10 animate-in zoom-in duration-500 max-w-lg mx-auto pb-10">
-                        <div className="no-print">
-                            <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-2xl">
-                                <CheckCircle size={48} />
-                            </div>
-                            <h3 className="text-4xl font-black text-gray-900 tracking-tight">Agendado!</h3>
-                            <p className="text-gray-500 text-lg">Seu lugar está garantido no {salon?.name}.</p>
+                    <div className="animate-in zoom-in duration-700 max-w-lg mx-auto pb-40">
+                        <div className="no-print text-center mb-10">
+                            <div className="w-20 h-20 bg-green-500 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl animate-bounce"><CheckCircle size={40} /></div>
+                            <h3 className="text-4xl font-black text-gray-900 tracking-tighter">Lugar Garantido!</h3>
+                            <p className="text-gray-500 font-bold">Reserva confirmada no {salon?.name}.</p>
                         </div>
 
-                        {/* PREMIUM RECEIPT CARD - Using strictly HEX/RGB for html2canvas compatibility (oklch fix) */}
-                        <div ref={ticketRef} className="receipt-card bg-white rounded-[3rem] border border-gray-100 relative overflow-hidden text-left p-0 mx-auto max-w-md" style={{ boxShadow: '0 32px 64px -16px rgba(0,0,0,0.1)' }}>
-                            <div className="absolute top-0 right-0 p-8 no-print">
-                                <div className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em] rotate-90 origin-right translate-x-4">#INCUBADORADESOLUÇÕES</div>
-                            </div>
-
-                            {/* Receipt Header */}
-                            <div className="p-8 text-white flex justify-between items-center" style={{ backgroundColor: '#111827' }}>
-                                <div>
-                                    <h4 className="text-2xl font-black tracking-tighter">Xonguile<span style={{ color: '#a855f7' }}>App</span></h4>
-                                    <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">Recibo de Agendamento Online</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase">ID Reserva</p>
-                                    <p className="text-lg font-mono font-black" style={{ color: '#a855f7' }}>XON-{result?.id?.toString().padStart(4, '0') || '0021'}</p>
-                                </div>
-                            </div>
-
-                            <div className="p-8 space-y-8 relative">
-                                {/* Salon Info */}
-                                <div className="flex justify-between items-end border-b border-gray-100 pb-6">
+                        {/* NO-OKLCH TICKET - PURE HEX STYLES ONLY */}
+                        <div ref={ticketRef} id="master-ticket" style={{
+                            backgroundColor: '#ffffff', borderRadius: '50px', border: '1px solid #e2e8f0',
+                            padding: '0', margin: '0 auto', width: '400px', maxWidth: '400px', minWidth: '400px',
+                            boxShadow: '0 40px 80px rgba(0,0,0,0.12)', fontFamily: 'Helvetica, Arial, sans-serif',
+                            position: 'relative'
+                        }}>
+                            <div style={{ backgroundColor: '#111827', padding: '45px 30px', color: '#ffffff', borderTopLeftRadius: '50px', borderTopRightRadius: '50px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                     <div>
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Estabelecimento</p>
-                                        <h5 className="text-2xl font-bold text-gray-900">{salon?.name}</h5>
-                                        <p className="text-xs text-gray-500">{salon?.address || 'Moçambique'}</p>
+                                        <h4 style={{ margin: 0, fontSize: '26px', fontWeight: '900', letterSpacing: '-1.5px' }}>Xonguile<span style={{ color: '#a855f7' }}>App</span></h4>
+                                        <p style={{ margin: '4px 0 0 0', fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold' }}>Recibo de Identidade Digital</p>
                                     </div>
-                                    <div className="text-right pb-1">
-                                        <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#9333ea' }}>#INCUBADORADESOLUÇÕES</div>
-                                    </div>
-                                </div>
-
-                                {/* Booking Details Grid */}
-                                <div className="grid grid-cols-2 gap-8">
-                                    <div>
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Serviço Selecionado</p>
-                                        <p className="text-lg font-bold text-gray-900 leading-tight">{selectedService?.name}</p>
-                                        <p className="text-xs font-black mt-1" style={{ color: '#9333ea' }}>MZN {selectedService?.price}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Data e Horário</p>
-                                        <p className="text-lg font-bold text-gray-900">{DateTime.fromISO(selectedDate).toFormat('dd LLL yyyy')}</p>
-                                        <p className="text-lg font-black text-gray-950">{selectedTime}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Profissional</p>
-                                        <p className="text-lg font-bold text-gray-900 leading-tight">{selectedProfessional?.name || 'Qualquer disponível'}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Duração Est.</p>
-                                        <p className="text-lg font-bold text-gray-900">{selectedService?.duration} min</p>
-                                    </div>
-                                </div>
-
-                                {/* Client Section / Card */}
-                                <div className="pt-8 border-t border-dashed border-gray-200">
-                                    <div className="p-6 rounded-3xl flex justify-between items-center group transition-all" style={{ backgroundColor: '#f9fafb' }}>
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <p className="text-[10px] text-gray-400 font-bold uppercase">Cliente / Xonguile ID</p>
-                                                <span className="px-2 py-0.5 text-[8px] text-white font-black rounded-full" style={{ backgroundColor: '#9333ea' }}>GLOBAL</span>
-                                            </div>
-                                            <p className="text-xl font-black text-gray-900 leading-tight">{clientData.name.toUpperCase()}</p>
-                                            <p className="font-mono font-bold tracking-tighter" style={{ color: '#7e22ce' }}>{result?.client?.xonguileId || xonguileId || 'XON-N5UZ2F'}</p>
-                                            <div className="mt-4">
-                                                <p className="text-[9px] font-black tracking-[0.2em] uppercase" style={{ color: '#c084fc' }}>#INCUBADORADESOLUÇÕES</p>
-                                            </div>
-                                        </div>
-                                        <div className="bg-white p-3 border border-gray-50 rounded-2xl shadow-xl">
-                                            <img
-                                                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BOOKING:${result?.id}|SALON:${salon?.id}|ID:${result?.client?.xonguileId || xonguileId}`}
-                                                alt="Booking QR"
-                                                className="w-16 h-16 sm:w-20 sm:h-20"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="pt-8 text-center space-y-2">
-                                    <p className="text-[9px] text-gray-400 font-medium">Apresente este código no salão para identificação rápida.</p>
-                                    <div className="flex items-center justify-center gap-2 border-t border-gray-100 pt-4">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Powered by</p>
-                                        <span className="text-xs font-black tracking-tighter" style={{ color: '#9333ea' }}>XonguileApp</span>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <p style={{ margin: 0, fontSize: '10px', color: '#94a3b8', fontWeight: '900' }}>ID #</p>
+                                        <p style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#a855f7' }}>{result?.id?.toString().padStart(4, '0')}</p>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Ticket Notch Effect */}
-                            <div className="absolute left-0 top-[35%] -translate-x-1/2 w-8 h-8 rounded-full border border-gray-100" style={{ backgroundColor: '#f9fafb' }}></div>
-                            <div className="absolute right-0 top-[35%] translate-x-1/2 w-8 h-8 rounded-full border border-gray-100" style={{ backgroundColor: '#f9fafb' }}></div>
+                            <div style={{ padding: '40px 30px' }}>
+                                <div style={{ marginBottom: '35px' }}>
+                                    <p style={{ margin: 0, fontSize: '24px', fontWeight: '900', color: '#111827' }}>{salon?.name}</p>
+                                    <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748b' }}>#INCUBADORADESOLUÇÕES</p>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '35px', marginBottom: '35px' }}>
+                                    <div>
+                                        <p style={{ margin: '0 0 6px 0', fontSize: '9px', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }}>Serviço</p>
+                                        <p style={{ margin: 0, fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>{selectedService?.name}</p>
+                                        <p style={{ margin: '4px 0 0 0', fontSize: '14px', fontWeight: '900', color: '#9333ea' }}>MZN {selectedService?.price}</p>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <p style={{ margin: '0 0 6px 0', fontSize: '9px', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }}>Data e Hora</p>
+                                        <p style={{ margin: 0, fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>{DateTime.fromISO(selectedDate).toFormat('dd MMM yyyy')}</p>
+                                        <p style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: '900', color: '#0f172a' }}>{selectedTime}</p>
+                                    </div>
+                                </div>
+
+                                <div style={{ backgroundColor: '#f8fafc', padding: '30px', borderRadius: '40px', border: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <p style={{ margin: '0 0 5px 0', fontSize: '9px', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }}>Titular da Conta</p>
+                                        <p style={{ margin: 0, fontSize: '20px', fontWeight: '900', color: '#0f172a', textTransform: 'uppercase' }}>{clientData.name}</p>
+                                        <p style={{ margin: '8px 0 0 0', fontSize: '15px', color: '#9333ea', fontWeight: '900' }}>{result?.client?.xonguileId || xonguileId || 'XON-NEW-2026'}</p>
+                                    </div>
+                                    <div style={{ backgroundColor: '#ffffff', padding: '10px', borderRadius: '20px', boxShadow: '0 10px 20px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9' }}>
+                                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&color=111827&data=BOOKING:${result?.id}|ID:${result?.client?.xonguileId || xonguileId}`} style={{ width: '65px', height: '65px', display: 'block' }} />
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: '40px', textAlign: 'center', borderTop: '2px dashed #f1f5f9', paddingTop: '30px' }}>
+                                    <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 'bold', margin: '0 0 15px 0' }}>Comprovativo aceite em todos os parceiros Xonguile.</p>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '13px', fontWeight: '900', color: '#9333ea' }}>Xonguile Network</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Decorative notches */}
+                            <div style={{ position: 'absolute', left: '-12px', top: '50%', width: '24px', height: '24px', backgroundColor: '#f9fafb', borderRadius: '50%', border: '1px solid #e2e8f0' }}></div>
+                            <div style={{ position: 'absolute', right: '-12px', top: '50%', width: '24px', height: '24px', backgroundColor: '#f9fafb', borderRadius: '50%', border: '1px solid #e2e8f0' }}></div>
                         </div>
 
-                        <div className="space-y-4 no-print px-6">
-                            <Button className="w-full flex items-center justify-center gap-3 py-6 rounded-[2.5rem] text-lg font-black shadow-2xl shadow-purple-600/30 transition-transform active:scale-95" onClick={handleDownloadPDF} disabled={loading}>
-                                {loading ? <Loader2 className="animate-spin" /> : <><Download size={24} /> Descarregar PDF Real</>}
+                        <div className="space-y-4 no-print px-6 mt-12">
+                            <Button className="w-full flex items-center justify-center gap-3 py-8 rounded-[2.5rem] text-xl font-black bg-purple-600 text-white shadow-2xl shadow-purple-200 transition-all active:scale-95" onClick={handleDownloadPDF} disabled={loading}>
+                                {loading ? <Loader2 className="animate-spin" /> : <><Download size={26} /> Baixar Comprovativo PDF</>}
                             </Button>
-
-                            <Link to="/explorar" className="block py-4 text-gray-400 hover:text-purple-600 font-black text-sm transition-colors uppercase tracking-[0.2em]">
-                                ← Voltar para o início
-                            </Link>
+                            <Link to="/explorar" className="block text-center py-4 text-gray-400 font-bold uppercase text-xs tracking-widest">Voltar ao Início</Link>
                         </div>
                     </div>
                 )}
 
-                {/* Booking Summary Box (Mobile Floating) */}
-                {step > 1 && step < 5 && selectedService && (
-                    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 shadow-2xl z-20 animate-in slide-in-from-bottom-full duration-500 floating-summary">
+                {/* Bottom Bar Selection */}
+                {step > 1 && step < 6 && selectedService && (
+                    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-6 shadow-2xl z-20 no-print animate-in slide-in-from-bottom-full">
                         <div className="max-w-2xl mx-auto flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-purple-50 text-purple-600 rounded-xl">
-                                    <Scissors size={20} />
-                                </div>
-                                <div className="max-w-[150px] sm:max-w-none">
-                                    <p className="text-xs font-bold text-gray-800 truncate">{selectedService.name}</p>
-                                    <p className="text-[10px] text-gray-500">
-                                        {selectedTime && `${DateTime.fromISO(selectedDate).toFormat('dd/MM')} às ${selectedTime}`}
-                                        {selectedProfessional && ` • ${selectedProfessional.name.split(' ')[0]}`}
-                                    </p>
-                                </div>
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl"><Scissors size={26} /></div>
+                                <div><p className="font-bold text-gray-900 leading-none">{selectedService.name}</p><p className="text-[10px] text-gray-400 font-bold mt-1 uppercase">{selectedTime && `${DateTime.fromISO(selectedDate).toFormat('dd MMM')} • ${selectedTime}`}</p></div>
                             </div>
-                            <div className="text-right">
-                                <p className="text-xs text-gray-400">Total</p>
-                                <p className="font-black text-purple-600">MZN {selectedService.price}</p>
-                            </div>
+                            <p className="text-2xl font-black text-purple-600">MZN {selectedService.price}</p>
                         </div>
                     </div>
                 )}
