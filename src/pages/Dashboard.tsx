@@ -7,6 +7,7 @@ import {
 import { DateTime } from 'luxon';
 import { clsx } from 'clsx';
 import { Link } from 'react-router-dom';
+import { Button } from '../components/ui/Button';
 
 export default function DashboardPage() {
     const today = DateTime.now();
@@ -48,9 +49,14 @@ export default function DashboardPage() {
 
     return (
         <div className="flex flex-col h-full bg-gray-50 overflow-auto">
-            <header className="px-8 py-8">
-                <h1 className="text-2xl font-bold text-gray-800">Visão Geral</h1>
-                <p className="text-gray-500">Resumo do dia {today.toFormat('dd/MM/yyyy')}</p>
+            <header className="px-8 py-8 flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-800">Visão Geral</h1>
+                    <p className="text-gray-500">Resumo do dia {today.toFormat('dd/MM/yyyy')}</p>
+                </div>
+                <Button variant="secondary" onClick={() => window.print()} className="no-print border-gray-200">
+                    <TrendingUp size={16} /> Exportar Relatório PDF
+                </Button>
             </header>
 
             <div className="px-8 pb-8 space-y-8">

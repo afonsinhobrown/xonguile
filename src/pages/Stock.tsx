@@ -89,10 +89,15 @@ export default function StockPage() {
                     <h1 className="text-2xl font-bold text-gray-800">Controle de Estoque</h1>
                     <p className="text-sm text-gray-500">Gerencie produtos de venda e uso interno</p>
                 </div>
-                <Button onClick={() => setIsModalOpen(true)}>
-                    <Plus size={18} />
-                    Novo Produto
-                </Button>
+                <div className="flex gap-3">
+                    <Button variant="secondary" onClick={() => window.print()} className="no-print border-gray-200">
+                        <ArrowUp size={16} className="rotate-45" /> Exportar PDF
+                    </Button>
+                    <Button onClick={() => setIsModalOpen(true)}>
+                        <Plus size={18} />
+                        Novo Produto
+                    </Button>
+                </div>
             </header>
 
             <div className="p-8 flex-1 overflow-auto">

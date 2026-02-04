@@ -334,8 +334,8 @@ function PayPalScript() {
     if (isMaster || document.getElementById('paypal-sdk-script')) return null;
 
     const script = document.createElement('script');
-    // USANDO O TEU CLIENT ID RESTRITO PARA O FRONTEND
-    script.src = `https://www.paypal.com/sdk/js?client-id=Ae5ECHexqZZdwVoXY_RqhqEi00m-39EJk0RTvWH7gpXQ3rF3ZvOSKaocFWSjm9CI48FJFZauOMcZHfYD&currency=MZN`;
+    // USANDO USD POIS PAYPAL NÃO SUPORTA MZN NATIVAMENTE NO GATEWAY PADRÃO
+    script.src = `https://www.paypal.com/sdk/js?client-id=Ae5ECHexqZZdwVoXY_RqhqEi00m-39EJk0RTvWH7gpXQ3rF3ZvOSKaocFWSjm9CI48FJFZauOMcZHfYD&currency=USD`;
     script.id = 'paypal-sdk-script';
     script.async = true;
     document.body.appendChild(script);
@@ -359,10 +359,14 @@ function PlanCard({ name, price, annual, features, color, highlight, btnClass, a
             // RENDERIZA O BOTÃO OFICIAL PAYPAL
             (window as any).paypal.Buttons({
                 createOrder: (data: any, actions: any) => {
+                    // CONVERSÃO MZN -> USD (Taxa aproximada de 64 para checkout global)
+                    const priceInMzn = parseFloat(finalPrice.replace(',', '.'));
+                    const priceInUsd = (priceInMzn / 64).toFixed(2);
+
                     return actions.order.create({
                         purchase_units: [{
-                            amount: { value: finalPrice, currency_code: 'MZN' },
-                            description: `Plano Xonguile ${name} - ${billingCycle}`
+                            amount: { value: priceInUsd, currency_code: 'USD' },
+                            description: `Plano Xonguile ${name} - ${billingCycle} (Convertido de MZN ${finalPrice})`
                         }]
                     });
                 },

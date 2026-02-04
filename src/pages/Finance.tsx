@@ -118,17 +118,19 @@ export default function FinancePage() {
                     <BarChart3 size={14} className="text-purple-600" />
                     Central de Relatórios
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 no-print">
                     <ReportButton
                         label="Fluxo Diário"
                         icon={<FileText size={18} />}
                         active={true}
+                        onClick={() => window.print()}
                     />
                     <ReportButton
                         label="Vendas por Serviço"
                         icon={<PieChart size={18} />}
                         active={reportLevel >= 2}
                         isPremium={reportLevel < 2}
+                        onClick={() => window.print()}
                     />
                     <ReportButton
                         label="Comissões"
@@ -251,7 +253,7 @@ export default function FinancePage() {
     );
 }
 
-function ReportButton({ label, icon, active, isPremium }: { label: string, icon: React.ReactNode, active: boolean, isPremium?: boolean }) {
+function ReportButton({ label, icon, active, isPremium, onClick }: { label: string, icon: React.ReactNode, active: boolean, isPremium?: boolean, onClick?: () => void }) {
     if (isPremium) {
         return (
             <Link to="/admin/configuracoes" className="flex items-center gap-3 p-4 bg-gray-50 border border-gray-100 rounded-xl relative overflow-hidden group hover:bg-white hover:border-purple-200 transition-all">
@@ -267,7 +269,11 @@ function ReportButton({ label, icon, active, isPremium }: { label: string, icon:
     }
 
     return (
-        <button className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-xl hover:shadow-md hover:border-purple-200 transition-all" disabled={!active}>
+        <button
+            onClick={onClick}
+            className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-xl hover:shadow-md hover:border-purple-200 transition-all"
+            disabled={!active}
+        >
             <div className="text-purple-600">{icon}</div>
             <span className="text-sm font-bold text-gray-800">{label}</span>
         </button>
