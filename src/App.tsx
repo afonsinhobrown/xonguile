@@ -23,32 +23,36 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
   return user ? children : <Navigate to="/login" replace />;
 }
 
+import { ErrorBoundary } from './components/ErrorBoundary';
+
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/explorar" element={<ExplorePage />} />
-        <Route path="/agendar/:salonId" element={<BookingPublicPage />} />
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/explorar" element={<ExplorePage />} />
+          <Route path="/agendar/:salonId" element={<BookingPublicPage />} />
 
-        <Route path="/admin" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
-          <Route index element={<DashboardPage />} />
-          <Route path="super" element={<SuperAdminPage />} />
-          <Route path="caixa" element={<POSPage />} />
-          <Route path="agenda" element={<AgendaPage />} />
-          <Route path="clientes" element={<ClientsPage />} />
-          <Route path="profissionais" element={<ProfessionalsPage />} />
-          <Route path="servicos" element={<ServicesPage />} />
-          <Route path="estoque" element={<StockPage />} />
-          <Route path="financeiro" element={<FinancePage />} />
-          <Route path="fila" element={<WaitingListPage />} />
-          <Route path="configuracoes" element={<SettingsPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+          <Route path="/admin" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
+            <Route index element={<DashboardPage />} />
+            <Route path="super" element={<SuperAdminPage />} />
+            <Route path="caixa" element={<POSPage />} />
+            <Route path="agenda" element={<AgendaPage />} />
+            <Route path="clientes" element={<ClientsPage />} />
+            <Route path="profissionais" element={<ProfessionalsPage />} />
+            <Route path="servicos" element={<ServicesPage />} />
+            <Route path="estoque" element={<StockPage />} />
+            <Route path="financeiro" element={<FinancePage />} />
+            <Route path="fila" element={<WaitingListPage />} />
+            <Route path="configuracoes" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

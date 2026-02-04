@@ -1,3 +1,22 @@
+import {
+    Calendar as CalendarIcon,
+    LayoutDashboard,
+    Users,
+    Scissors,
+    Package,
+    Settings,
+    LogOut,
+    Sparkles,
+    Banknote,
+    ShoppingCart,
+    Menu,
+    Clock,
+    Shield
+} from 'lucide-react';
+import { NavLink, Outlet, Link } from 'react-router-dom';
+import { clsx } from 'clsx';
+import { useState } from 'react';
+
 export function MainLayout() {
     // SECURITY HELPER: Fetch user data reliably
     const getUserData = () => {
