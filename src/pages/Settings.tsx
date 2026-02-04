@@ -320,7 +320,10 @@ function PlanCard({ name, price, annual, features, color, highlight, btnClass, a
                         purchase_units: [{
                             amount: { value: usdPrice, currency_code: 'USD' },
                             description: `Assinatura Xonguile: ${name} (${cycle})`
-                        }]
+                        }],
+                        application_context: {
+                            shipping_preference: 'NO_SHIPPING'
+                        }
                     });
                 },
                 onApprove: async (data: any, actions: any) => {

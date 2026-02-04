@@ -84,7 +84,7 @@ export default function ExplorePage() {
                         </div>
                     ) : salons.length > 0 ? (
                         salons.map(salon => (
-                            <SalonCard key={salon.id} salon={salon} />
+                            <SalonCard key={salon.id} salon={salon} searchQuery={searchQuery} />
                         ))
                     ) : (
                         <div className="col-span-full py-20 text-center bg-white rounded-3xl border-2 border-dashed border-gray-200">
@@ -100,7 +100,7 @@ export default function ExplorePage() {
     );
 }
 
-function SalonCard({ salon }: { salon: any }) {
+function SalonCard({ salon, searchQuery }: { salon: any, searchQuery: string }) {
     return (
         <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-xl transition-all group flex flex-col justify-between">
             <div className="flex items-start justify-between mb-4">
@@ -122,7 +122,7 @@ function SalonCard({ salon }: { salon: any }) {
             <div className="space-y-3">
                 <p className="text-sm text-gray-600 line-clamp-2">Especialistas em beleza e bem-estar prontos para atendê-lo com excelência.</p>
                 <Link
-                    to={`/agendar/${salon.id}`}
+                    to={`/agendar/${salon.id}${searchQuery ? `?q=${searchQuery}` : ''}`}
                     className="flex items-center justify-between w-full bg-gray-50 group-hover:bg-purple-600 group-hover:text-white p-4 rounded-2xl font-bold transition-all text-gray-800"
                 >
                     <span>Ver Serviços e Agendar</span>

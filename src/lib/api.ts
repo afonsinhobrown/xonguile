@@ -105,7 +105,11 @@ export const api = {
     publicListSalons: async () => fetch(`${API_URL}/public/salons`).then(res => res.json()),
     publicSearchServices: async (q: string) => fetch(`${API_URL}/public/search-services?q=${q}`).then(res => res.json()),
     publicGetSalon: async (id: string) => fetch(`${API_URL}/public/salons/${id}`).then(res => res.json()),
-    publicGetSlots: async (id: string, date: string) => fetch(`${API_URL}/public/salons/${id}/slots?date=${date}`).then(res => res.json()),
+    publicGetSlots: async (id: string, date: string, time?: string) => {
+        let url = `${API_URL}/public/salons/${id}/slots?date=${date}`;
+        if (time) url += `&time=${time}`;
+        return fetch(url).then(res => res.json());
+    },
     publicClientLookup: async (params: any) => {
         const query = new URLSearchParams(params).toString();
         return fetch(`${API_URL}/public/client-lookup?${query}`).then(res => res.json());

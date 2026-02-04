@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
     Scissors, Calendar, Clock, User, CheckCircle, ArrowLeft,
@@ -13,6 +13,8 @@ import { Input } from '../components/ui/Input';
 export default function BookingPublicPage() {
     const { salonId } = useParams();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const initialQuery = searchParams.get('q') || '';
 
     const [step, setStep] = useState(1);
     const [salon, setSalon] = useState<any>(null);
@@ -38,14 +40,35 @@ export default function BookingPublicPage() {
     const [result, setResult] = useState<any>(null);
     const [isBooking, setIsBooking] = useState(false);
 
+    // Filtered Services based on search query
+    const filteredServices = useMemo(() => {
+        if (!salon?.Services) return [];
+        if (!initialQuery) return salon.Services;
+        const q = initialQuery.toLowerCase();
+        return salon.Services.filter((s: any) =>
+            s.name.toLowerCase().includes(q)
+        );
+    }, [salon, initialQuery]);
+
     useEffect(() => {
         if (salonId) {
             api.publicGetSalon(salonId).then(data => {
                 setSalon(data);
                 setLoading(false);
+
+                // If there's a search term and it narrows down to 1 service, auto-select it
+                if (initialQuery && data.Services) {
+                    const matches = data.Services.filter((s: any) =>
+                        s.name.toLowerCase().includes(initialQuery.toLowerCase())
+                    );
+                    if (matches.length === 1) {
+                        setSelectedService(matches[0]);
+                        setStep(2); // Skip Step 1
+                    }
+                }
             });
         }
-    }, [salonId]);
+    }, [salonId, initialQuery]);
 
     useEffect(() => {
         if (salonId && selectedDate && step === 2) {
@@ -75,14 +98,19 @@ export default function BookingPublicPage() {
     };
 
     const handleFinalize = async () => {
+        if (!selectedService || !selectedDate || !selectedTime) return alert('Por favor, selecione todos os dados.');
         setIsBooking(true);
         try {
             const data = {
+                salonId: parseInt(salonId!),
+                serviceId: selectedService.id,
+                date: selectedDate,
+                time: selectedTime,
+                professionalId: selectedProfessional?.id,
                 clientData: {
                     ...clientData,
                     xonguileId: hasCard ? xonguileId : undefined
-                },
-                professionalId: selectedProfessional?.id
+                }
             };
             const res = await api.publicBook(data);
             setResult(res);
@@ -128,9 +156,14 @@ export default function BookingPublicPage() {
                 {/* STEP 1: SERVICES */}
                 {step === 1 && (
                     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <h3 className="text-2xl font-bold text-gray-800">Escolha o serviço</h3>
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-2xl font-bold text-gray-800">Escolha o serviço</h3>
+                            {initialQuery && (
+                                <button onClick={() => navigate(`/agendar/${salonId}`)} className="text-xs text-purple-600 font-bold">Ver Todos</button>
+                            )}
+                        </div>
                         <div className="grid gap-3">
-                            {salon?.Services?.map((s: any) => (
+                            {filteredServices.map((s: any) => (
                                 <button
                                     key={s.id}
                                     onClick={() => { setSelectedService(s); handleNext(); }}
@@ -148,6 +181,12 @@ export default function BookingPublicPage() {
                                     </div>
                                 </button>
                             ))}
+                            {filteredServices.length === 0 && (
+                                <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-200">
+                                    <p className="text-gray-400">Nenhum serviço encontrado para "{initialQuery}".</p>
+                                    <button onClick={() => navigate(`/agendar/${salonId}`)} className="mt-2 text-purple-600 font-bold">Ver toda a lista</button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -171,7 +210,6 @@ export default function BookingPublicPage() {
                                     key={time}
                                     onClick={async () => {
                                         setSelectedTime(time);
-                                        // Buscar profissionais livres para este serviço e hora
                                         const profs = await api.publicGetSlots(salonId!, selectedDate, time);
                                         setAvailableProfessionals(profs);
                                         handleNext();
@@ -188,7 +226,7 @@ export default function BookingPublicPage() {
                     </div>
                 )}
 
-                {/* STEP 2.5 (New Step 3): SELECT PROFESSIONAL */}
+                {/* STEP 3: SELECT PROFESSIONAL */}
                 {step === 3 && (
                     <div className="space-y-6">
                         <h3 className="text-2xl font-bold text-gray-800">Escolha o Profissional</h3>
@@ -216,7 +254,7 @@ export default function BookingPublicPage() {
                     </div>
                 )}
 
-                {/* STEP 4: IDENTITY CHOICE (Moved forward due to professional selection) */}
+                {/* STEP 4: IDENTITY CHOICE */}
                 {step === 4 && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                         <h3 className="text-2xl font-bold text-gray-800">Agora, quem é você?</h3>
@@ -293,36 +331,37 @@ export default function BookingPublicPage() {
                             <p className="text-gray-500 mt-2">Pronto para ficar ainda mais incrível?</p>
                         </div>
 
-                        <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-2xl relative overflow-hidden group">
-                            {/* Decorative elements */}
-                            <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-600/10 rounded-full blur-3xl"></div>
-                            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-600/10 rounded-full blur-3xl"></div>
+                        {result && result.client && (
+                            <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-2xl relative overflow-hidden group">
+                                <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-600/10 rounded-full blur-3xl"></div>
+                                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-600/10 rounded-full blur-3xl"></div>
 
-                            <div className="relative">
-                                <div className="flex justify-between items-start mb-10">
-                                    <div className="text-left">
-                                        <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest mb-1">Cartão Digital</p>
-                                        <h4 className="text-2xl font-black text-gray-800 tracking-tight">Xonguile<span className="text-purple-600">ID</span></h4>
+                                <div className="relative">
+                                    <div className="flex justify-between items-start mb-10">
+                                        <div className="text-left">
+                                            <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest mb-1">Cartão Digital</p>
+                                            <h4 className="text-2xl font-black text-gray-800 tracking-tight">Xonguile<span className="text-purple-600">ID</span></h4>
+                                        </div>
+                                        <div className="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center text-white font-black text-xl">X</div>
                                     </div>
-                                    <div className="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center text-white font-black text-xl">X</div>
-                                </div>
 
-                                <div className="text-left mb-8">
-                                    <p className="text-xs text-gray-400 font-bold uppercase mb-1">Titular</p>
-                                    <p className="text-lg font-bold text-gray-800">{result.client.name.toUpperCase()}</p>
-                                </div>
-
-                                <div className="flex justify-between items-end">
-                                    <div>
-                                        <p className="text-xs text-gray-400 font-bold uppercase mb-1">ID Único</p>
-                                        <p className="text-xl font-mono font-black text-purple-700">{result.client.xonguileId}</p>
+                                    <div className="text-left mb-8">
+                                        <p className="text-xs text-gray-400 font-bold uppercase mb-1">Titular</p>
+                                        <p className="text-lg font-bold text-gray-800">{result.client.name.toUpperCase()}</p>
                                     </div>
-                                    <div className="bg-white p-2 rounded-2xl shadow-inner border border-gray-50">
-                                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${result.client.xonguileId}`} alt="QR" className="w-20 h-20" />
+
+                                    <div className="flex justify-between items-end">
+                                        <div>
+                                            <p className="text-xs text-gray-400 font-bold uppercase mb-1">ID Único</p>
+                                            <p className="text-xl font-mono font-black text-purple-700">{result.client.xonguileId}</p>
+                                        </div>
+                                        <div className="bg-white p-2 rounded-2xl shadow-inner border border-gray-50">
+                                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${result.client.xonguileId}`} alt="QR" className="w-20 h-20" />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
                         <div className="space-y-3">
                             <Button className="w-full flex items-center justify-center gap-2 py-4 rounded-3xl" onClick={() => window.print()}>
