@@ -3,7 +3,8 @@ import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api';
 import {
     Scissors, Calendar, Clock, User, CheckCircle, ArrowLeft,
-    ArrowRight, Loader2, CreditCard, Download, Mail, Smartphone
+    ArrowRight, Loader2, CreditCard, Download, Mail, Smartphone,
+    UserCheck, AlertCircle
 } from 'lucide-react';
 import { DateTime } from 'luxon';
 import { clsx } from 'clsx';
@@ -31,6 +32,7 @@ export default function BookingPublicPage() {
     // Client State
     const [hasCard, setHasCard] = useState<boolean | null>(null);
     const [xonguileId, setXonguileId] = useState('');
+    const [idVerified, setIdVerified] = useState(false);
     const [clientData, setClientData] = useState({
         name: '',
         phone: '',
@@ -63,7 +65,7 @@ export default function BookingPublicPage() {
                     );
                     if (matches.length === 1) {
                         setSelectedService(matches[0]);
-                        setStep(2); // Skip Step 1
+                        setStep(2); // Skip Step 1 (Service Selection)
                     }
                 }
             });
@@ -77,21 +79,29 @@ export default function BookingPublicPage() {
     }, [salonId, selectedDate, step]);
 
     const handleNext = () => setStep(s => s + 1);
-    const handleBack = () => setStep(s => s - 1);
+    const handleBack = () => {
+        if (step === 2 && selectedService && initialQuery) {
+            setStep(1); // Allow going back to see all services even if pre-skipped
+        } else {
+            setStep(s => s - 1);
+        }
+    };
 
     const handleClientLookup = async () => {
         if (!xonguileId) return;
         setLoading(true);
         try {
+            // Global Lookup: A single person is a client of all salons in the ecosystem
             const data = await api.publicClientLookup({ xonguileId });
             if (data) {
                 setClientData({ name: data.name, phone: data.phone, email: data.email });
-                setStep(5);
+                setIdVerified(true);
+                // Proceed directly to booking confirmation logic
             } else {
-                alert('ID Xonguile não encontrado.');
+                alert('ID Xonguile não encontrado. Verifique se digitou corretamente.');
             }
         } catch (e) {
-            alert('Erro ao buscar ID.');
+            alert('Erro ao buscar ID. Tente novamente.');
         } finally {
             setLoading(false);
         }
@@ -109,14 +119,14 @@ export default function BookingPublicPage() {
                 professionalId: selectedProfessional?.id,
                 clientData: {
                     ...clientData,
-                    xonguileId: hasCard ? xonguileId : undefined
+                    xonguileId: (hasCard || idVerified) ? xonguileId : undefined
                 }
             };
             const res = await api.publicBook(data);
             setResult(res);
             setStep(6);
         } catch (e: any) {
-            alert(e.error || 'Falha ao agendar');
+            alert(e.error || 'Falha ao agendar. Verifique os dados e tente novamente.');
         } finally {
             setIsBooking(false);
         }
@@ -129,7 +139,7 @@ export default function BookingPublicPage() {
             {/* Nav */}
             <header className="bg-white border-b border-gray-200 p-4 sticky top-0 z-10">
                 <div className="max-w-2xl mx-auto flex items-center justify-between">
-                    <button onClick={() => step > 1 && step < 5 ? handleBack() : navigate('/explorar')} className="p-2 hover:bg-gray-100 rounded-full">
+                    <button onClick={() => step > 1 ? handleBack() : navigate('/explorar')} className="p-2 hover:bg-gray-100 rounded-full">
                         <ArrowLeft size={20} />
                     </button>
                     <div className="text-center">
@@ -142,18 +152,24 @@ export default function BookingPublicPage() {
 
             <main className="flex-1 max-w-2xl mx-auto w-full p-4 pb-20">
 
-                {/* Step Progress */}
+                {/* Step Progress - Compressed if service pre-selected */}
                 {step < 6 && (
                     <div className="flex gap-2 mb-8">
-                        {[1, 2, 3, 4, 5].map(s => (
-                            <div key={s} className={clsx("h-1.5 flex-1 rounded-full bg-gray-200 overflow-hidden")}>
-                                <div className={clsx("h-full bg-purple-600 transition-all duration-500", s <= step ? 'w-full' : 'w-0')}></div>
-                            </div>
-                        ))}
+                        {[1, 2, 3, 4, 5].map(s => {
+                            // If Step 1 was skipped, we still show the bar but it's always "full"
+                            const isHidden = s === 1 && initialQuery && selectedService;
+                            if (isHidden) return null;
+
+                            return (
+                                <div key={s} className={clsx("h-1.5 flex-1 rounded-full bg-gray-200 overflow-hidden")}>
+                                    <div className={clsx("h-full bg-purple-600 transition-all duration-500", s <= step ? 'w-full' : 'w-0')}></div>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
 
-                {/* STEP 1: SERVICES */}
+                {/* STEP 1: SERVICES (Hidden if skipped) */}
                 {step === 1 && (
                     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="flex items-center justify-between">
@@ -181,12 +197,6 @@ export default function BookingPublicPage() {
                                     </div>
                                 </button>
                             ))}
-                            {filteredServices.length === 0 && (
-                                <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-200">
-                                    <p className="text-gray-400">Nenhum serviço encontrado para "{initialQuery}".</p>
-                                    <button onClick={() => navigate(`/agendar/${salonId}`)} className="mt-2 text-purple-600 font-bold">Ver toda a lista</button>
-                                </div>
-                            )}
                         </div>
                     </div>
                 )}
@@ -249,7 +259,6 @@ export default function BookingPublicPage() {
                                     </div>
                                 </button>
                             ))}
-                            {availableProfessionals.length === 0 && <p className="text-center py-8 text-gray-400">Nenhum profissional disponível para este horário.</p>}
                         </div>
                     </div>
                 )}
@@ -258,7 +267,7 @@ export default function BookingPublicPage() {
                 {step === 4 && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                         <h3 className="text-2xl font-bold text-gray-800">Agora, quem é você?</h3>
-                        <p className="text-gray-500">Para facilitar o seu atendimento, identifique-se abaixo.</p>
+                        <p className="text-gray-500">Seu agendamento em Moçambique será unificado com seu Cartão Xonguile.</p>
 
                         <div className="grid gap-4">
                             <button
@@ -269,7 +278,7 @@ export default function BookingPublicPage() {
                                     <CreditCard size={24} />
                                 </div>
                                 <h4 className="font-bold text-lg text-gray-800">Tenho Cartão Xonguile</h4>
-                                <p className="text-sm text-gray-500">Usar meu ID digital para carregar meus dados.</p>
+                                <p className="text-sm text-gray-500">Usar meu ID digital (Global) para carregar meus dados.</p>
                             </button>
 
                             <button
@@ -280,7 +289,7 @@ export default function BookingPublicPage() {
                                     <User size={24} />
                                 </div>
                                 <h4 className="font-bold text-lg text-gray-800">Não tenho cartão / Sou novo</h4>
-                                <p className="text-sm text-gray-500">Preencher dados manualmente e ganhar um cartão.</p>
+                                <p className="text-sm text-gray-500">Preencha os dados uma vez para ser agendado em qualquer lugar.</p>
                             </button>
                         </div>
                     </div>
@@ -290,30 +299,54 @@ export default function BookingPublicPage() {
                 {step === 5 && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                         {hasCard ? (
-                            <div className="space-y-4">
-                                <h3 className="text-2xl font-bold text-gray-800">Digite seu ID Xonguile</h3>
-                                <Input
-                                    label="ID do Cartão"
-                                    placeholder="Ex: XON-XXXXXX"
-                                    value={xonguileId}
-                                    onChange={(e: any) => setXonguileId(e.target.value)}
-                                />
-                                <Button className="w-full py-4 text-lg font-bold" onClick={handleClientLookup} disabled={loading}>
-                                    {loading ? <Loader2 className="animate-spin" /> : 'Verificar ID'}
-                                </Button>
+                            <div className="space-y-6">
+                                {!idVerified ? (
+                                    <div className="space-y-4">
+                                        <h3 className="text-2xl font-bold text-gray-800">Digite seu ID Xonguile</h3>
+                                        <p className="text-sm text-gray-500">Este ID é válido em qualquer salão ou parceiro da rede Xonguile.</p>
+                                        <Input
+                                            label="ID do Cartão"
+                                            placeholder="Ex: XON-N5UZ2F"
+                                            value={xonguileId}
+                                            onChange={(e: any) => setXonguileId(e.target.value)}
+                                        />
+                                        <Button className="w-full py-4 text-lg font-bold" onClick={handleClientLookup} disabled={loading}>
+                                            {loading ? <Loader2 className="animate-spin" /> : 'Verificar ID'}
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-3xl flex flex-col items-center text-center">
+                                            <div className="w-16 h-16 bg-emerald-500 text-white rounded-full flex items-center justify-center mb-4 shadow-lg">
+                                                <UserCheck size={32} />
+                                            </div>
+                                            <h3 className="text-xl font-bold text-emerald-900">ID Identificado!</h3>
+                                            <p className="text-emerald-700 font-medium">{clientData.name}</p>
+                                            <p className="text-xs text-emerald-600 mt-1">{clientData.phone}</p>
+                                        </div>
+
+                                        <Button className="w-full py-4 text-lg font-bold" onClick={handleFinalize} disabled={isBooking}>
+                                            {isBooking ? <Loader2 className="animate-spin" /> : 'Finalizar Agendamento'}
+                                        </Button>
+
+                                        <button onClick={() => { setIdVerified(false); setClientData({ name: '', phone: '', email: '' }); }} className="flex items-center gap-2 text-gray-400 text-sm mx-auto font-medium">
+                                            <AlertCircle size={14} /> Não é você? Trocar ID
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                <h3 className="text-2xl font-bold text-gray-800">Dados do Cliente</h3>
+                                <h3 className="text-2xl font-bold text-gray-800">Seus Dados</h3>
                                 <Input label="Nome Completo" value={clientData.name} onChange={(e: any) => setClientData({ ...clientData, name: e.target.value })} required placeholder="Como devemos te chamar?" />
                                 <Input label="Telemóvel" value={clientData.phone} onChange={(e: any) => setClientData({ ...clientData, phone: e.target.value })} required placeholder="84 XXXXXXXX" />
-                                <Input label="Email" value={clientData.email} onChange={(e: any) => setClientData({ ...clientData, email: e.target.value })} placeholder="Para receber seu cartão digital" />
+                                <Input label="Email" value={clientData.email} onChange={(e: any) => setClientData({ ...clientData, email: e.target.value })} placeholder="Para receber lembretes" />
 
                                 <div className="pt-4">
                                     <Button className="w-full py-4 text-lg font-bold" onClick={handleFinalize} disabled={isBooking}>
                                         {isBooking ? <Loader2 className="animate-spin" /> : 'Confirmar Agendamento'}
                                     </Button>
-                                    <p className="text-[10px] text-gray-400 text-center mt-3">Ao confirmar, você aceita receber seu cartão digital Xonguile.</p>
+                                    <p className="text-[10px] text-gray-400 text-center mt-3">Sua conta será criada globalmente para uso em outros parceiros.</p>
                                 </div>
                             </div>
                         )}
@@ -328,7 +361,7 @@ export default function BookingPublicPage() {
                                 <CheckCircle size={40} />
                             </div>
                             <h3 className="text-3xl font-bold text-gray-900">Agendado com sucesso!</h3>
-                            <p className="text-gray-500 mt-2">Pronto para ficar ainda mais incrível?</p>
+                            <p className="text-gray-500 mt-2">Seu horário foi reservado no {salon?.name}.</p>
                         </div>
 
                         {result && result.client && (
@@ -339,7 +372,7 @@ export default function BookingPublicPage() {
                                 <div className="relative">
                                     <div className="flex justify-between items-start mb-10">
                                         <div className="text-left">
-                                            <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest mb-1">Cartão Digital</p>
+                                            <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest mb-1">Cartão Global</p>
                                             <h4 className="text-2xl font-black text-gray-800 tracking-tight">Xonguile<span className="text-purple-600">ID</span></h4>
                                         </div>
                                         <div className="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center text-white font-black text-xl">X</div>
@@ -353,10 +386,10 @@ export default function BookingPublicPage() {
                                     <div className="flex justify-between items-end">
                                         <div>
                                             <p className="text-xs text-gray-400 font-bold uppercase mb-1">ID Único</p>
-                                            <p className="text-xl font-mono font-black text-purple-700">{result.client.xonguileId}</p>
+                                            <p className="text-xl font-mono font-black text-purple-700">{result.client.xonguileId || xonguileId}</p>
                                         </div>
                                         <div className="bg-white p-2 rounded-2xl shadow-inner border border-gray-50">
-                                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${result.client.xonguileId}`} alt="QR" className="w-20 h-20" />
+                                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${result.client.xonguileId || xonguileId}`} alt="QR" className="w-20 h-20" />
                                         </div>
                                     </div>
                                 </div>
@@ -366,18 +399,8 @@ export default function BookingPublicPage() {
                         <div className="space-y-3">
                             <Button className="w-full flex items-center justify-center gap-2 py-4 rounded-3xl" onClick={() => window.print()}>
                                 <Download size={20} />
-                                Baixar Cartão Digital
+                                Baixar Comprovativo PDF
                             </Button>
-                            <div className="flex gap-2">
-                                <Button variant="ghost" className="flex-1 flex items-center justify-center gap-2 border border-gray-200">
-                                    <Mail size={18} />
-                                    E-mail
-                                </Button>
-                                <Button variant="ghost" className="flex-1 flex items-center justify-center gap-2 border border-gray-200">
-                                    <Smartphone size={18} />
-                                    SMS
-                                </Button>
-                            </div>
                         </div>
 
                         <div className="pt-4">
