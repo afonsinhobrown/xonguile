@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
-import { DollarSign, Calendar, TrendingUp, Users, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import {
+    DollarSign, Calendar, TrendingUp, Users, ArrowUpRight, ArrowDownRight,
+    Plus, ShoppingCart, UserPlus, Scissors, Sparkles, Banknote
+} from 'lucide-react';
 import { DateTime } from 'luxon';
 import { clsx } from 'clsx';
+import { Link } from 'react-router-dom';
 
 export default function DashboardPage() {
     const today = DateTime.now();
@@ -78,6 +82,52 @@ export default function DashboardPage() {
                         icon={<Users size={24} className="text-orange-600" />}
                         color="bg-orange-50 border-orange-100"
                     />
+                </div>
+
+                {/* Quick Actions Section */}
+                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <Plus size={18} className="text-purple-600" />
+                        Ações Rápidas
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <QuickActionButton
+                            to="/admin/agenda"
+                            label="Agendar"
+                            icon={<Calendar size={20} />}
+                            color="bg-purple-50 text-purple-600 hover:bg-purple-100"
+                        />
+                        <QuickActionButton
+                            to="/admin/caixa"
+                            label="Nova Venda"
+                            icon={<ShoppingCart size={20} />}
+                            color="bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                        />
+                        <QuickActionButton
+                            to="/admin/clientes"
+                            label="Novo Cliente"
+                            icon={<UserPlus size={20} />}
+                            color="bg-sky-50 text-sky-600 hover:bg-sky-100"
+                        />
+                        <QuickActionButton
+                            to="/admin/profissionais"
+                            label="Profissional"
+                            icon={<Scissors size={20} />}
+                            color="bg-orange-50 text-orange-600 hover:bg-orange-100"
+                        />
+                        <QuickActionButton
+                            to="/admin/servicos"
+                            label="Novo Serviço"
+                            icon={<Sparkles size={20} />}
+                            color="bg-pink-50 text-pink-600 hover:bg-pink-100"
+                        />
+                        <QuickActionButton
+                            to="/admin/financeiro"
+                            label="Financeiro"
+                            icon={<Banknote size={20} />}
+                            color="bg-blue-50 text-blue-600 hover:bg-blue-100"
+                        />
+                    </div>
                 </div>
 
                 {/* Recent Activity & Quick Actions */}
@@ -156,4 +206,21 @@ function StatsCard({ title, value, subValue, icon, color }: { title: string, val
             </div>
         </div>
     )
+}
+
+function QuickActionButton({ to, icon, label, color }: { to: string, icon: React.ReactNode, label: string, color: string }) {
+    return (
+        <Link
+            to={to}
+            className={clsx(
+                "flex flex-col items-center justify-center p-4 rounded-xl transition-all border border-transparent shadow-sm",
+                color
+            )}
+        >
+            <div className="mb-2">
+                {icon}
+            </div>
+            <span className="text-xs font-bold text-center">{label}</span>
+        </Link>
+    );
 }
