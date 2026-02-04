@@ -7,24 +7,46 @@ import { api } from '../lib/api';
 
 export default function LandingPage() {
     const navigate = useNavigate();
-    const [featuredSalon, setFeaturedSalon] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const [salonsList, setSalonsList] = useState<any[]>([]);
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    const loadFeatured = (list: any[], index: number) => {
+        if (!list.length) return;
+        setLoading(true);
+        api.publicGetSalon(list[index].id).then(fullData => {
+            setFeaturedSalon(fullData);
+            setLoading(false);
+        }).catch(() => setLoading(false));
+    };
 
     useEffect(() => {
-        api.publicListSalons().then(salons => {
-            if (salons && salons.length > 0) {
-                // Get a random salon or the first one as featured
-                const random = salons[Math.floor(Math.random() * salons.length)];
-                // Fetch full details including services
-                api.publicGetSalon(random.id).then(fullData => {
-                    setFeaturedSalon(fullData);
-                    setLoading(false);
-                });
+        api.publicListSalons().then(list => {
+            if (list && list.length > 0) {
+                setSalonsList(list);
+                // Start with a random one
+                const randomIdx = Math.floor(Math.random() * list.length);
+                setCurrentIndex(randomIdx);
+                loadFeatured(list, randomIdx);
             } else {
                 setLoading(false);
             }
         }).catch(() => setLoading(false));
     }, []);
+
+    // Auto-rotate every 10 seconds if there's more than one salon
+    useEffect(() => {
+        if (salonsList.length <= 1) return;
+
+        const interval = setInterval(() => {
+            setCurrentIndex(prev => {
+                const next = (prev + 1) % salonsList.length;
+                loadFeatured(salonsList, next);
+                return next;
+            });
+        }, 10000);
+
+        return () => clearInterval(interval);
+    }, [salonsList]);
 
     return (
         <div className="min-h-screen font-sans bg-white text-gray-900 selection:bg-purple-200 selection:text-purple-900">
