@@ -323,12 +323,15 @@ app.listen(PORT, async () => {
             console.log("Creating Official Admin Tenant...");
             const salon = await Salon.create({ name: 'Xonguile App Admin', slug: 'admin' });
 
-            // Lifetime license
+            // 10-Day Trial (No lifetime)
+            const validUntil = new Date();
+            validUntil.setDate(validUntil.getDate() + 10);
+
             await License.create({
-                key: 'XONGUILE-MASTER-001',
-                type: 'lifetime',
+                key: 'XONGUILE-ADMIN-TRIAL',
+                type: 'trial',
                 status: 'active',
-                validUntil: new Date('2099-12-31'),
+                validUntil: validUntil,
                 SalonId: salon.id
             });
 
@@ -341,6 +344,23 @@ app.listen(PORT, async () => {
                 SalonId: salon.id
             });
             console.log("OFFICIAL ADMIN CREATED: admin@angiarte.com / 123");
+        } else {
+            // FIX: Convert any existing lifetime license to 10-day trial starting today
+            const lifetimeLicenses = await License.findAll({ where: { type: 'lifetime' } });
+            if (lifetimeLicenses.length > 0) {
+                console.log(`--- Corrigindo ${lifetimeLicenses.length} licenças vitalícias ---`);
+                const trialUntil = new Date();
+                trialUntil.setDate(trialUntil.getDate() + 10);
+
+                for (const lic of lifetimeLicenses) {
+                    await lic.update({
+                        type: 'trial',
+                        validUntil: trialUntil,
+                        key: `FIX-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
+                    });
+                }
+                console.log('--- Licenças vitalícias corrigidas com sucesso ---');
+            }
         }
 
     } catch (error) {
