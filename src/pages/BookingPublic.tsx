@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Scissors, CheckCircle, ArrowLeft, Loader2, CreditCard, Download, User, UserCheck } from 'lucide-react';
@@ -14,7 +14,6 @@ export default function BookingPublicPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const initialQuery = searchParams.get('q') || '';
-    const ticketRef = useRef<HTMLDivElement>(null);
 
     const [step, setStep] = useState(1);
     const [salon, setSalon] = useState<any>(null);
@@ -116,42 +115,201 @@ export default function BookingPublicPage() {
     };
 
     const handleDownloadPDF = async () => {
-        if (!ticketRef.current || !result) return;
+        if (!result) return;
         setLoading(true);
 
-        // REMOVE all modern styles temporarily if possible, or just use scale 2 for stability
-        setTimeout(async () => {
-            try {
-                const element = ticketRef.current!;
-                const canvas = await html2canvas(element, {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: '#ffffff',
-                    // This tells html2canvas to try and handle the colors more gracefully
-                    onclone: (clonedDoc) => {
-                        const styleTags = clonedDoc.getElementsByTagName('style');
-                        for (let i = 0; i < styleTags.length; i++) {
-                            if (styleTags[i].innerHTML.includes('oklch')) {
-                                styleTags[i].remove(); // Kill the toxic CSS
-                            }
-                        }
-                    }
-                });
+        try {
+            // Create a completely isolated HTML document with ZERO Tailwind/oklch contamination
+            const ticketHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #ffffff; padding: 20px; }
+        .ticket { 
+            width: 400px; 
+            background: #ffffff; 
+            border-radius: 40px; 
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            border: 1px solid #e5e7eb;
+        }
+        .header { 
+            background: #111827; 
+            padding: 40px 30px; 
+            color: #ffffff; 
+        }
+        .header h1 { 
+            font-size: 24px; 
+            font-weight: 900; 
+            margin-bottom: 5px;
+        }
+        .header .purple { color: #a855f7; }
+        .header .subtitle { 
+            font-size: 10px; 
+            color: #94a3b8; 
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .header .id { 
+            text-align: right; 
+            font-size: 16px; 
+            font-weight: 900; 
+            color: #a855f7; 
+            margin-top: -30px;
+        }
+        .body { padding: 35px 30px; }
+        .salon-name { 
+            font-size: 22px; 
+            font-weight: 900; 
+            color: #111827; 
+            margin-bottom: 5px;
+        }
+        .brand { 
+            font-size: 11px; 
+            color: #6b7280; 
+            margin-bottom: 30px;
+        }
+        .info-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 25px; 
+            margin-bottom: 30px;
+        }
+        .info-label { 
+            font-size: 9px; 
+            color: #9ca3af; 
+            font-weight: bold; 
+            text-transform: uppercase; 
+            margin-bottom: 5px;
+        }
+        .info-value { 
+            font-size: 16px; 
+            font-weight: 900; 
+            color: #1e293b; 
+        }
+        .info-value.purple { color: #9333ea; }
+        .info-value.large { font-size: 20px; }
+        .client-box { 
+            background: #f8fafc; 
+            padding: 25px; 
+            border-radius: 30px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            border: 1px solid #f1f5f9;
+        }
+        .client-name { 
+            font-size: 18px; 
+            font-weight: 900; 
+            color: #0f172a; 
+            text-transform: uppercase; 
+            margin-bottom: 8px;
+        }
+        .client-id { 
+            font-size: 14px; 
+            color: #9333ea; 
+            font-weight: 900; 
+        }
+        .qr-box { 
+            background: #ffffff; 
+            padding: 10px; 
+            border-radius: 15px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .qr-box img { 
+            width: 60px; 
+            height: 60px; 
+            display: block; 
+        }
+    </style>
+</head>
+<body>
+    <div class="ticket">
+        <div class="header">
+            <h1>Xonguile<span class="purple">App</span></h1>
+            <div class="subtitle">Comprovativo de Reserva</div>
+            <div class="id">#${String(result.app?.id || result.id || '0000').padStart(4, '0')}</div>
+        </div>
+        <div class="body">
+            <div class="salon-name">${salon?.name || 'Salão'}</div>
+            <div class="brand">#INCUBADORADESOLUÇÕES</div>
+            
+            <div class="info-grid">
+                <div>
+                    <div class="info-label">Serviço</div>
+                    <div class="info-value">${selectedService?.name}</div>
+                    <div class="info-value purple">MZN ${selectedService?.price}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="info-label">Data e Hora</div>
+                    <div class="info-value">${DateTime.fromISO(selectedDate).toFormat('dd/MM/yyyy')}</div>
+                    <div class="info-value large">${selectedTime}</div>
+                </div>
+            </div>
+            
+            <div class="client-box">
+                <div>
+                    <div class="info-label">Cliente</div>
+                    <div class="client-name">${clientData.name}</div>
+                    <div class="client-id">${result.client?.xonguileId || xonguileId || 'XON-NEW'}</div>
+                </div>
+                <div class="qr-box">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BOOKING:${result.app?.id || result.id}|${result.client?.xonguileId || xonguileId}" />
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
 
-                const imgData = canvas.toDataURL('image/png');
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const ticketWidthOnPdf = 130;
-                const ticketHeightOnPdf = (canvas.height * ticketWidthOnPdf) / canvas.width;
-                const x = (pdfWidth - ticketWidthOnPdf) / 2;
+            // Create invisible iframe to render the clean HTML
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'absolute';
+            iframe.style.left = '-9999px';
+            iframe.style.width = '500px';
+            iframe.style.height = '800px';
+            document.body.appendChild(iframe);
 
-                pdf.addImage(imgData, 'PNG', x, 20, ticketWidthOnPdf, ticketHeightOnPdf);
-                pdf.save(`Ticket_XON_${result.id}.pdf`);
-            } catch (e: any) {
-                console.error('PDF Catch:', e);
-                alert('Erro na geração. Tire um screenshot do bilhete.');
-            } finally { setLoading(false); }
-        }, 500);
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            if (!iframeDoc) throw new Error('Não foi possível criar o documento PDF');
+
+            iframeDoc.open();
+            iframeDoc.write(ticketHTML);
+            iframeDoc.close();
+
+            // Wait for images to load
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            const ticketElement = iframeDoc.querySelector('.ticket') as HTMLElement;
+            if (!ticketElement) throw new Error('Elemento não encontrado');
+
+            const canvas = await html2canvas(ticketElement, {
+                scale: 3,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false
+            });
+
+            document.body.removeChild(iframe);
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const ticketWidthOnPdf = 130;
+            const ticketHeightOnPdf = (canvas.height * ticketWidthOnPdf) / canvas.width;
+            const x = (pdfWidth - ticketWidthOnPdf) / 2;
+
+            pdf.addImage(imgData, 'PNG', x, 20, ticketWidthOnPdf, ticketHeightOnPdf);
+            pdf.save(`Ticket_Xonguile_${result.app?.id || result.id}.pdf`);
+        } catch (e: any) {
+            console.error('PDF Catch:', e);
+            alert('Erro ao gerar PDF: ' + e.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (loading && step === 1) return <div className="min-h-screen flex items-center justify-center bg-white"><Loader2 className="animate-spin text-purple-600" /></div>;
@@ -262,38 +420,43 @@ export default function BookingPublicPage() {
                 )}
 
                 {step === 6 && (
-                    <div className="max-w-md mx-auto pb-40 text-center">
-                        <div className="mb-8 font-black text-green-500">Reserva Confirmada!</div>
-
-                        <div ref={ticketRef} style={{
-                            backgroundColor: '#ffffff', borderRadius: '40px', border: '1px solid #eee',
-                            padding: '0', width: '400px', margin: '0 auto', textAlign: 'left',
-                            boxShadow: '0 20px 50px rgba(0,0,0,0.1)', fontFamily: 'Arial'
-                        }}>
-                            <div style={{ backgroundColor: '#111', padding: '30px', color: 'white', borderTopLeftRadius: '40px', borderTopRightRadius: '40px' }}>
-                                <div style={{ fontSize: '20px', fontWeight: '900' }}>Xonguile<span style={{ color: '#a855f7' }}>App</span></div>
-                                <div style={{ fontSize: '10px', opacity: 0.6 }}>COMPROVATIVO DE RESERVA</div>
+                    <div className="max-w-md mx-auto pb-40 text-center space-y-8">
+                        <div className="animate-in zoom-in">
+                            <div className="w-20 h-20 bg-green-500 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
+                                <CheckCircle size={40} />
                             </div>
-                            <div style={{ padding: '30px' }}>
-                                <p style={{ margin: 0, fontWeight: '900', fontSize: '24px' }}>{salon?.name}</p>
-                                <p style={{ margin: 0, fontSize: '11px', color: '#999' }}>#INCUBADORADESOLUÇÕES</p>
+                            <h3 className="text-3xl font-black text-gray-900">Confirmado!</h3>
+                            <p className="text-gray-500 mt-2">Reserva garantida no {salon?.name}</p>
+                        </div>
 
-                                <div style={{ marginTop: '25px', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-                                    <div><p style={{ margin: 0, fontSize: '10px', color: '#999' }}>SERVIÇO</p><p style={{ margin: 0, fontWeight: 'bold' }}>{selectedService?.name}</p></div>
-                                    <div style={{ textAlign: 'right' }}><p style={{ margin: 0, fontSize: '10px', color: '#999' }}>HORA</p><p style={{ margin: 0, fontWeight: 'bold', fontSize: '18px' }}>{selectedTime}</p></div>
+                        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-100">
+                            <div className="space-y-4 text-left">
+                                <div>
+                                    <p className="text-xs text-gray-400 uppercase font-bold">Serviço</p>
+                                    <p className="font-black text-xl">{selectedService?.name}</p>
+                                    <p className="text-purple-600 font-black">MZN {selectedService?.price}</p>
                                 </div>
-                                <div style={{ marginTop: '20px' }}><p style={{ margin: 0, fontSize: '10px', color: '#999' }}>DATA</p><p style={{ margin: 0, fontWeight: 'bold' }}>{DateTime.fromISO(selectedDate).toFormat('dd/MM/yyyy')}</p></div>
-
-                                <div style={{ marginTop: '30px', padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div><p style={{ margin: 0, fontSize: '10px', color: '#999' }}>CONTA</p><p style={{ margin: 0, fontWeight: '900', textTransform: 'uppercase' }}>{clientData.name}</p><p style={{ margin: 0, color: '#a855f7', fontWeight: 'bold' }}>{result?.client?.xonguileId || xonguileId}</p></div>
-                                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=XON-${result?.id}`} style={{ width: '60px', height: '60px', borderRadius: '10px' }} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-xs text-gray-400 uppercase font-bold">Data</p>
+                                        <p className="font-black">{DateTime.fromISO(selectedDate).toFormat('dd/MM/yyyy')}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-400 uppercase font-bold">Hora</p>
+                                        <p className="font-black text-2xl">{selectedTime}</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-400 uppercase font-bold">Cliente</p>
+                                    <p className="font-black uppercase">{clientData.name}</p>
+                                    <p className="text-purple-600 font-bold text-sm">{result?.client?.xonguileId || xonguileId}</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="mt-10 px-6 space-y-4 no-print">
-                            <Button className="w-full py-6 rounded-[2rem] bg-purple-600 text-white font-black shadow-xl" onClick={handleDownloadPDF} disabled={loading}>
-                                {loading ? <Loader2 className="animate-spin" /> : 'Baixar PDF'}
+                        <div className="space-y-4 no-print">
+                            <Button className="w-full py-6 rounded-[2rem] bg-purple-600 text-white font-black shadow-xl flex items-center justify-center gap-3" onClick={handleDownloadPDF} disabled={loading}>
+                                {loading ? <Loader2 className="animate-spin" /> : <><Download size={24} /> Baixar Comprovativo PDF</>}
                             </Button>
                             <Link to="/explorar" className="block text-gray-400 font-bold text-sm">Voltar ao Início</Link>
                         </div>
