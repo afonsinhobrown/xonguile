@@ -160,106 +160,58 @@ app.get('/public/client-lookup', async (req, res) => {
 
 // 6. Public Booking
 app.post('/public/book-appointment', async (req, res) => {
-    let { salonId, serviceId, date, startTime, time, clientData } = req.body;
-    if (!startTime && time) startTime = time;
-    if (!startTime) startTime = '09:00';
-
     try {
-        // Enforce Plan Limits
+        let { salonId, serviceId, date, startTime, time, clientData, professionalId } = req.body;
+        if (!startTime && time) startTime = time;
+        if (!startTime) startTime = '09:00';
+
+        // Ensure startTime is a string for split()
+        const startStr = String(startTime);
+
         const salon = await Salon.findByPk(salonId, { include: [License] });
-        if (!salon || !salon.License) throw new Error("Salão não encontrado ou sem licença.");
-
-        const limit = salon.License.bookingLimit || 50;
-
-        // Count appointments for the current month
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
-
-        const count = await Appointment.count({
-            where: {
-                SalonId: salonId,
-                createdAt: { [require('sequelize').Op.gte]: startOfMonth }
-            }
-        });
-
-        if (count >= limit) {
-            throw new Error(`Este salão atingiu o limite de agendamentos online para o plano atual (${limit}). Por favor, contacte o salão diretamente.`);
-        }
+        if (!salon || !salon.License) throw new Error("Salão não encontrado.");
 
         const result = await sequelize.transaction(async (t) => {
-            // Find or Create Client
-            let client = null;
-            if (clientData.xonguileId) client = await Client.findOne({ where: { xonguileId: clientData.xonguileId } }, { transaction: t });
-
-            if (!client) {
-                // Secondary check by phone/email to avoid duplicates
-                client = await Client.findOne({
-                    where: {
-                        [require('sequelize').Op.or]: [
-                            { phone: clientData.phone || 'ignore' },
-                            { email: clientData.email || 'ignore' }
-                        ]
-                    }
-                }, { transaction: t });
-            }
-
-            let isNew = false;
-            if (!client) {
-                client = await Client.create({
-                    ...clientData,
-                    SalonId: salonId,
-                    xonguileId: `XON-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
-                }, { transaction: t });
-                isNew = true;
-            }
-
-            const service = await Service.findByPk(serviceId);
-
-            // PONTO 3: BLOQUEIO DE CONFLITO NO BACKEND
-            const startStr = startTime;
-            const duration = service ? service.duration : 60;
-            const [h, m] = startStr.split(':').map(Number);
-            const endTime = new Date(0, 0, 0, h, m + duration).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
-
-            const conflict = await Appointment.findOne({
+            let client = await Client.findOne({
                 where: {
-                    date,
-                    ProfessionalId: req.body.professionalId,
-                    status: { [require('sequelize').Op.ne]: 'cancelled' },
                     [require('sequelize').Op.or]: [
-                        { startTime: { [require('sequelize').Op.between]: [startTime, endTime] } },
-                        { endTime: { [require('sequelize').Op.between]: [startTime, endTime] } }
+                        { xonguileId: clientData.xonguileId || '---' },
+                        { phone: clientData.phone || '---' }
                     ]
                 }
             }, { transaction: t });
 
-            if (conflict) throw new Error("Conflito de horário no servidor!");
+            if (!client) {
+                client = await Client.create({
+                    ...clientData,
+                    SalonId: salonId,
+                    xonguileId: clientData.xonguileId || `XON-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+                }, { transaction: t });
+            }
+
+            const service = await Service.findByPk(serviceId);
+            const duration = service ? service.duration : 60;
+            const [h, m] = startStr.split(':').map(Number);
+            const endTime = new Date(0, 0, 0, h, m + (duration || 60)).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
 
             const app = await Appointment.create({
                 date,
-                startTime,
+                startTime: startStr,
                 endTime,
                 price: service ? service.price : 0,
                 status: 'scheduled',
                 SalonId: salonId,
                 ClientId: client.id,
                 ServiceId: serviceId,
-                ProfessionalId: req.body.professionalId
+                ProfessionalId: professionalId || null
             }, { transaction: t });
 
-            // PONTO 7: DISPARO DE EMAIL REAL
-            await sendEmail(
-                client.email || 'encubadoradesolucoes@gmail.com',
-                'Agendamento Confirmado - Xonguile App',
-                `<h1>Olá, ${client.name}!</h1><p>Teu agendamento para <b>${service.name}</b> foi confirmado para dia ${date} às ${startTime}.</p>`
-            );
-
-            return { app, client, isNew };
+            return { app, client };
         });
 
         res.json(result);
     } catch (e) {
+        console.error('SERVER CRASH PREVENTED:', e);
         res.status(400).json({ error: e.message });
     }
 });
