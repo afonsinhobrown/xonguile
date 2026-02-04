@@ -4,7 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import {
     Save, Building, Receipt, Users, Trash2, Plus, Upload,
-    Sparkles, CheckCircle, Loader2, Shield, Lock, CreditCard
+    Sparkles, CheckCircle, Loader2, Shield, Lock, CreditCard, FileText
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useForm } from 'react-hook-form';
@@ -12,7 +12,7 @@ import { DateTime } from 'luxon';
 import { Link } from 'react-router-dom';
 
 export default function SettingsPage() {
-    const [activeTab, setActiveTab] = useState<'salon' | 'receipt' | 'users' | 'plans'>('salon');
+    const [activeTab, setActiveTab] = useState<'salon' | 'users' | 'plans' | 'reports'>('salon');
     const [loading, setLoading] = useState(false);
     const [users, setUsers] = useState<any[]>([]);
     const [salon, setSalon] = useState<any>({});
@@ -20,7 +20,7 @@ export default function SettingsPage() {
     const license = salon?.License || salon?.license || {};
 
     useEffect(() => {
-        if (license.status && license.status !== 'active' && activeTab !== 'plans') {
+        if (license.status && license.status !== 'active' && activeTab !== 'plans' && activeTab !== 'reports') {
             setActiveTab('plans');
         }
     }, [license, activeTab]);
@@ -96,187 +96,152 @@ export default function SettingsPage() {
                 <h1 className="text-2xl font-bold text-gray-800">Configurações</h1>
                 <p className="text-sm text-gray-500">Gerencie os dados do seu salão</p>
 
-                <div className="flex gap-4 mt-6">
+                <div className="flex gap-4 mt-6 overflow-x-auto pb-2 scrollbar-none">
                     <TabButton active={activeTab === 'salon'} onClick={() => setActiveTab('salon')} icon={<Building size={18} />}>Dados do Salão</TabButton>
-                    <TabButton active={activeTab === 'receipt'} onClick={() => setActiveTab('receipt')} icon={<Receipt size={18} />}>Configurar Recibo</TabButton>
                     <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<Users size={18} />}>Gestão de Usuários</TabButton>
-                    <TabButton active={activeTab === 'plans'} onClick={() => setActiveTab('plans')} icon={<Sparkles size={18} />}>Plano e Assinatura</TabButton>
+                    <TabButton active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon={<FileText size={18} />}>Documentos & PDFs</TabButton>
+                    <TabButton active={activeTab === 'plans'} onClick={() => setActiveTab('plans')} icon={<CreditCard size={18} />}>Assinatura & Planos</TabButton>
                 </div>
             </header>
 
-            <div className="p-8 flex-1 overflow-auto max-w-4xl">
+            <div className="p-8 flex-1 overflow-auto">
+                <div className="max-w-4xl">
+                    {/* SALON SETTINGS TAB */}
+                    {activeTab === 'salon' && (
+                        <form onSubmit={handleSalon(onSaveSalon)} className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm space-y-6">
+                            <h2 className="text-lg font-bold text-gray-800 border-b pb-2 mb-4">Informações Gerais</h2>
+                            <div className="grid grid-cols-2 gap-6">
+                                <Input label="Nome do Salão" {...registerSalon('name')} />
+                                <Input label="Telefone / Contato" {...registerSalon('phone')} />
+                            </div>
+                            <Input label="Email de Contato" {...registerSalon('email')} />
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium text-gray-700">Endereço Completo</label>
+                                <textarea {...registerSalon('address')} className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:ring-2 focus:ring-purple-400 min-h-[80px]" />
+                            </div>
 
-                {/* SALON SETTINGS TAB */}
-                {activeTab === 'salon' && (
-                    <form onSubmit={handleSalon(onSaveSalon)} className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm space-y-6">
-                        <h2 className="text-lg font-bold text-gray-800 border-b pb-2 mb-4">Informações Gerais</h2>
+                            <div className="flex items-center gap-6 pt-6 border-t border-gray-100">
+                                <div className="w-20 h-20 bg-gray-50 rounded-lg border border-dashed border-gray-300 flex items-center justify-center overflow-hidden">
+                                    {salon.logo ? <img src={salon.logo} className="w-full h-full object-contain" /> : <span className="text-[10px] text-gray-400">Sem Logo</span>}
+                                </div>
+                                <label className="cursor-pointer bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                                    <Upload size={16} /> Enviar Logo
+                                    <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                                </label>
+                            </div>
 
-                        <div className="grid grid-cols-2 gap-6">
-                            <Input label="Nome do Salão" {...registerSalon('name')} />
-                            <Input label="Telefone / Contato" {...registerSalon('phone')} />
+                            <div className="flex justify-end pt-4">
+                                <Button type="submit" disabled={loading}>
+                                    <Save size={18} /> Salvar Alterações
+                                </Button>
+                            </div>
+                        </form>
+                    )}
+
+                    {/* USERS TAB */}
+                    {activeTab === 'users' && (
+                        <div className="space-y-8">
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-gray-50 border-b border-gray-100 text-gray-500">
+                                        <tr>
+                                            <th className="px-6 py-3">Nome</th>
+                                            <th className="px-6 py-3 text-right">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {users.map(u => (
+                                            <tr key={u.id} className="hover:bg-gray-50">
+                                                <td className="px-6 py-3 font-medium text-gray-800">{u.name} ({u.role})</td>
+                                                <td className="px-6 py-3 text-right">
+                                                    <button onClick={() => onDeleteUser(u.id)} className="text-gray-400 hover:text-red-600"><Trash2 size={16} /></button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">Adicionar Novo Usuário</h3>
+                                <form onSubmit={handleUser(onAddUser)} className="grid grid-cols-2 gap-4">
+                                    <Input label="Nome" {...registerUser('name')} />
+                                    <Input label="Email" type="email" {...registerUser('email')} />
+                                    <Input label="Senha" type="password" {...registerUser('password')} />
+                                    <select {...registerUser('role')} className="w-full h-11 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:ring-2 focus:ring-purple-400 mt-6">
+                                        <option value="professional">Profissional</option>
+                                        <option value="admin">Administrador</option>
+                                    </select>
+                                    <div className="col-span-2 flex justify-end pt-2">
+                                        <Button type="submit">Criar Usuário</Button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                        <Input label="Email de Contato" {...registerSalon('email')} />
-                        <div className="space-y-1">
-                            <label className="text-sm font-medium text-gray-700">Endereço Completo</label>
-                            <textarea {...registerSalon('address')} className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:ring-2 focus:ring-purple-400 min-h-[80px]" />
-                        </div>
+                    )}
 
-                        <div className="flex justify-end pt-4">
-                            <Button type="submit" disabled={loading}>
-                                <Save size={18} /> Salvar Alterações
-                            </Button>
-                        </div>
-                    </form>
-                )}
+                    {/* REPORTS TAB */}
+                    {activeTab === 'reports' && (
+                        <div className="space-y-6">
+                            <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-8 rounded-[2rem] text-white shadow-xl">
+                                <h3 className="text-2xl font-black mb-2 flex items-center gap-2">
+                                    <FileText size={28} /> Central de Documentos & PDFs
+                                </h3>
+                                <p className="text-purple-100 mb-8 max-w-xl">Aceda aos seus relatórios profissionais de acordo com o seu plano.</p>
 
-                {/* RECEIPT CONFIG TAB */}
-                {activeTab === 'receipt' && (
-                    <form onSubmit={handleSalon(onSaveSalon)} className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm space-y-6">
-                        <h2 className="text-lg font-bold text-gray-800 border-b pb-2 mb-4">Personalização de Recibos</h2>
-
-                        <div className="flex gap-8 items-start">
-                            <div className="flex-1 space-y-4">
-                                <Input label="NUIT / NIF" placeholder="Ex: 123456789" {...registerSalon('nuit')} />
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium text-gray-700">Rodapé do Recibo</label>
-                                    <textarea
-                                        {...registerSalon('receiptFooter')}
-                                        placeholder="Ex: Obrigado pela preferência! Volte sempre."
-                                        className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:ring-2 focus:ring-purple-400 min-h-[80px]"
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <ReportInfoCard
+                                        title="Fluxo de Caixa Diário"
+                                        desc="Relatório completo de entradas e saídas do dia."
+                                        location="Menu: Financeiro"
+                                    />
+                                    <ReportInfoCard
+                                        title="Resumo de Performance"
+                                        desc="BI avançado e métricas de crescimento operacional."
+                                        location="Menu: Dashboard"
+                                    />
+                                    <ReportInfoCard
+                                        title="Inventário de Stock"
+                                        desc="Lista de produtos e necessidades de reposição."
+                                        location="Menu: Estoque"
+                                    />
+                                    <ReportInfoCard
+                                        title="Folha de Comissões"
+                                        desc="Pagamentos e cálculos automáticos de profissionais."
+                                        location="Menu: Financeiro"
                                     />
                                 </div>
                             </div>
-
-                            <div className="w-64 flex flex-col items-center gap-4 p-4 border border-dashed border-gray-300 rounded-xl bg-gray-50">
-                                <div className="w-32 h-32 bg-white rounded-lg border border-gray-200 flex items-center justify-center overflow-hidden relative">
-                                    {salon.logo ? (
-                                        <img src={salon.logo} alt="Logo" className="w-full h-full object-contain" />
-                                    ) : (
-                                        <span className="text-gray-400 text-xs text-center p-2">Sem Logo</span>
-                                    )}
-                                </div>
-                                <label className="cursor-pointer bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
-                                    <Upload size={16} /> Carregar Logo
-                                    <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-                                </label>
-                                <p className="text-[10px] text-gray-400 text-center">Recomendado: 200x200px PNG com fundo transparente</p>
+                            <div className="bg-white p-6 rounded-xl border border-gray-200 text-center">
+                                <p className="text-gray-500 text-sm">Os botões de exportação (PDF) aparecem no topo de cada página indicada acima.</p>
                             </div>
                         </div>
+                    )}
 
-                        <div className="flex justify-end pt-4">
-                            <Button type="submit" disabled={loading}>
-                                <Save size={18} /> Salvar Configurações
-                            </Button>
-                        </div>
-                    </form>
-                )}
-
-                {/* USERS TAB */}
-                {activeTab === 'users' && (
-                    <div className="space-y-8">
-                        {/* List */}
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50 border-b border-gray-100 text-gray-500">
-                                    <tr>
-                                        <th className="px-6 py-3">Nome</th>
-                                        <th className="px-6 py-3">Email</th>
-                                        <th className="px-6 py-3">Função</th>
-                                        <th className="px-6 py-3 text-right">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {users.map(u => (
-                                        <tr key={u.id} className="hover:bg-gray-50">
-                                            <td className="px-6 py-3 font-medium text-gray-800">{u.name}</td>
-                                            <td className="px-6 py-3 text-gray-600">{u.email}</td>
-                                            <td className="px-6 py-3">
-                                                <span className={clsx(
-                                                    "px-2 py-1 rounded text-xs font-semibold capitalize",
-                                                    u.role === 'admin' ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
-                                                )}>
-                                                    {u.role}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-3 text-right">
-                                                <button onClick={() => onDeleteUser(u.id)} className="text-gray-400 hover:text-red-600">
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Add New */}
-                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                            <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                <Plus size={18} /> Adicionar Novo Usuário
-                            </h3>
-                            <form onSubmit={handleUser(onAddUser)} className="grid grid-cols-2 gap-4 items-end">
-                                <Input label="Nome" placeholder="Nome do usuário" {...registerUser('name', { required: true })} />
-                                <Input label="Email" type="email" placeholder="email@salao.com" {...registerUser('email', { required: true })} />
-                                <Input label="Senha" type="password" placeholder="••••••" {...registerUser('password', { required: true })} />
-                                <div>
-                                    <label className="text-sm font-medium text-gray-700 block mb-1">Função</label>
-                                    <select {...registerUser('role')} className="w-full h-11 rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-purple-400">
-                                        <option value="professional">Profissional (Acesso Limitado)</option>
-                                        <option value="reception">Recepção</option>
-                                        <option value="admin">Administrador</option>
-                                    </select>
-                                </div>
-                                <div className="col-span-2 flex justify-end">
-                                    <Button type="submit">Criar Usuário</Button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )}
-
-                {/* PLANS & SUBSCRIPTION TAB */}
-                {activeTab === 'plans' && (
-                    <div className="space-y-10 animate-in fade-in duration-500">
-                        {/* Current Plan Header */}
-                        <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-[2rem] p-8 text-white shadow-xl relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
-                            <div className="relative">
-                                <p className="text-purple-100 text-sm font-bold uppercase tracking-widest mb-2">Seu Plano Atual</p>
-                                <h3 className="text-4xl font-black mb-4 capitalize">
-                                    {license.type?.replace('_', ' ') || 'Teste Grátis'}
-                                </h3>
-                                <div className="flex items-center gap-2 text-purple-100 text-sm">
-                                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                                    Status: <span className="font-bold text-white uppercase">{license.status}</span>
-                                    <span className="mx-2">•</span>
-                                    Expira em: <span className="font-bold text-white">{DateTime.fromISO(license.validUntil).toFormat('dd/MM/yyyy')}</span>
+                    {/* PLANS TAB */}
+                    {activeTab === 'plans' && (
+                        <div className="space-y-10">
+                            <div className="bg-gray-900 rounded-[2rem] p-8 text-white shadow-xl relative overflow-hidden">
+                                <div className="relative">
+                                    <p className="text-gray-400 text-sm font-bold uppercase tracking-widest mb-1">Status da Assinatura</p>
+                                    <h3 className="text-3xl font-black mb-2 flex items-center gap-3">
+                                        {license.type?.replace('_', ' ') || 'Teste Grátis'}
+                                        <span className="bg-emerald-500 text-white text-[10px] px-2 py-0.5 rounded-full">ATIVO</span>
+                                    </h3>
+                                    <p className="text-gray-400 text-sm">Válido até: {DateTime.fromISO(license.validUntil).toFormat('dd/MM/yyyy')}</p>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Plan Comparison */}
-                        <div>
-                            <div className="text-center mb-8">
-                                <h2 className="text-3xl font-black text-gray-900 mb-2">Escolha o plano ideal</h2>
-                                <p className="text-gray-500">Escala as funcionalidades de acordo com o crescimento do seu salão</p>
-                            </div>
-
-                            <div className="grid md:grid-cols-3 gap-6">
+                            <div className="grid md:grid-cols-3 gap-6 pb-20">
                                 <PlanCard
                                     name="Standard"
                                     price="1.800"
                                     annual="19.000"
                                     type="standard_month"
-                                    salonId={salon.id}
+                                    salonId={salon.id || currentUser.salonId || currentUser.salon?.id}
                                     onSuccess={loadData}
-                                    features={[
-                                        "Até 50 agendamentos mensais",
-                                        "Gestão de Profissionais",
-                                        "Controle de Serviços",
-                                        "Relatórios Básicos",
-                                    ]}
+                                    features={["Até 50 agendamentos", "Gestão de Membros", "Serviços", "Relatórios (PDF)"]}
                                     color="text-gray-600"
-                                    btnClass="bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                    btnClass="bg-gray-100 text-gray-800"
                                     active={license.type?.includes('standard')}
                                 />
                                 <PlanCard
@@ -284,17 +249,12 @@ export default function SettingsPage() {
                                     price="2.500"
                                     annual="22.000"
                                     type="gold_month"
-                                    salonId={salon.id}
+                                    salonId={salon.id || currentUser.salonId || currentUser.salon?.id}
                                     onSuccess={loadData}
-                                    features={[
-                                        "Até 70 agendamentos mensais",
-                                        "Gestão de Estoque Completa",
-                                        "Relatórios de Vendas e Serviços",
-                                        "Suporte Prioritário",
-                                    ]}
-                                    color="text-purple-600 border-purple-200"
+                                    features={["Até 70 agendamentos", "Stock Completo", "Vendas (PDF)", "Prioridade"]}
+                                    color="text-purple-600"
                                     highlight
-                                    btnClass="bg-purple-600 text-white hover:bg-purple-700"
+                                    btnClass="bg-purple-600 text-white"
                                     active={license.type?.includes('gold')}
                                 />
                                 <PlanCard
@@ -302,84 +262,76 @@ export default function SettingsPage() {
                                     price="3.000"
                                     annual="28.000"
                                     type="premium_month"
-                                    salonId={salon.id}
+                                    salonId={salon.id || currentUser.salonId || currentUser.salon?.id}
                                     onSuccess={loadData}
-                                    features={[
-                                        "Agendamentos Ilimitados",
-                                        "Fila de Espera Digital",
-                                        "Relatórios Avançados e BI",
-                                        "Sem anúncios Xonguile",
-                                    ]}
-                                    color="text-indigo-600 border-indigo-200"
-                                    btnClass="bg-indigo-600 text-white hover:bg-indigo-700"
+                                    features={["Ilimitado", "BI & Performance", "No Ads", "Multi-Usuário"]}
+                                    color="text-indigo-600"
+                                    btnClass="bg-indigo-600 text-white"
                                     active={license.type?.includes('premium')}
                                 />
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
-            {/* PAYPAL SDK SCRIPT */}
             <PayPalScript />
+        </div>
+    );
+}
+
+function ReportInfoCard({ title, desc, location }: any) {
+    return (
+        <div className="bg-white/10 p-4 rounded-xl border border-white/10">
+            <h4 className="text-white font-bold text-sm mb-1">{title}</h4>
+            <p className="text-[10px] text-purple-100 mb-2">{desc}</p>
+            <p className="text-[9px] font-black uppercase text-purple-200 mt-2 pt-2 border-t border-white/5">{location}</p>
         </div>
     );
 }
 
 function PayPalScript() {
     const user = JSON.parse(localStorage.getItem('salao_user') || '{}');
-    const isMaster = user.role?.startsWith('super_');
-
-    // Não carrega o script se for Super Admin ou se já existir
-    if (isMaster || document.getElementById('paypal-sdk-script')) return null;
+    if (user.role?.startsWith('super_') || document.getElementById('paypal-sdk-script')) return null;
 
     const script = document.createElement('script');
-    // USANDO USD POIS PAYPAL NÃO SUPORTA MZN NATIVAMENTE NO GATEWAY PADRÃO
     script.src = `https://www.paypal.com/sdk/js?client-id=Ae5ECHexqZZdwVoXY_RqhqEi00m-39EJk0RTvWH7gpXQ3rF3ZvOSKaocFWSjm9CI48FJFZauOMcZHfYD&currency=USD`;
     script.id = 'paypal-sdk-script';
     script.async = true;
     document.body.appendChild(script);
-
     return null;
 }
 
 function PlanCard({ name, price, annual, features, color, highlight, btnClass, active, salonId, type, onSuccess }: any) {
     const [checkingOut, setCheckingOut] = useState(false);
 
-    const handlePayPal = async (billingCycle: 'month' | 'year') => {
-        if (!salonId) return alert('Carregando informações do salão...');
-        if (!(window as any).paypal) return alert('O PayPal ainda está a carregar... Tente em 2 segundos.');
+    const handlePayPal = async (cycle: 'month' | 'year') => {
+        if (!salonId) return alert('Identificação do salão não encontrada. Recarregue a página.');
+        if (!(window as any).paypal) return alert('O PayPal está a carregar... Tente em instantes.');
 
-        const finalType = type.replace('month', billingCycle);
-        const finalPrice = billingCycle === 'month' ? price.replace('.', '') : annual.replace('.', '');
-
+        const finalPrice = cycle === 'month' ? price.replace('.', '') : annual.replace('.', '');
         setCheckingOut(true);
 
         try {
-            // RENDERIZA O BOTÃO OFICIAL PAYPAL
             (window as any).paypal.Buttons({
                 createOrder: (data: any, actions: any) => {
-                    // CONVERSÃO MZN -> USD (Taxa aproximada de 64 para checkout global)
-                    const priceInMzn = parseFloat(finalPrice.replace(',', '.'));
-                    const priceInUsd = (priceInMzn / 64).toFixed(2);
-
+                    const usdPrice = (parseFloat(finalPrice) / 64).toFixed(2);
                     return actions.order.create({
                         purchase_units: [{
-                            amount: { value: priceInUsd, currency_code: 'USD' },
-                            description: `Plano Xonguile ${name} - ${billingCycle} (Convertido de MZN ${finalPrice})`
+                            amount: { value: usdPrice, currency_code: 'USD' },
+                            description: `Assinatura Xonguile: ${name} (${cycle})`
                         }]
                     });
                 },
                 onApprove: async (data: any, actions: any) => {
-                    const details = await actions.order.capture();
-                    // Ativa no nosso backend após sucesso real no PayPal
-                    await api.activateSubscription(salonId, finalType);
-                    alert(`✅ PAGAMENTO CONFIRMADO! Bem-vindo ao plano ${name}.`);
+                    await actions.order.capture();
+                    await api.activateSubscription(salonId, type.replace('month', cycle));
+                    alert('Assinatura ativada com sucesso!');
                     onSuccess();
                 },
                 onError: (err: any) => {
-                    console.error("PayPal Error:", err);
-                    alert("Ocorreu um erro no portal do PayPal.");
+                    console.error(err);
+                    alert('Erro no processamento do PayPal.');
                 }
             }).render('#paypal-button-container-' + name);
         } catch (e) {
@@ -391,64 +343,45 @@ function PlanCard({ name, price, annual, features, color, highlight, btnClass, a
 
     return (
         <div className={clsx(
-            "p-8 rounded-[2.5rem] bg-white border-2 flex flex-col justify-between transition-all hover:shadow-2xl",
-            highlight ? "border-purple-600 scale-105 shadow-xl z-10" : "border-gray-100",
+            "p-6 rounded-[2rem] bg-white border flex flex-col justify-between transition-all",
+            highlight ? "border-purple-600 shadow-xl scale-105" : "border-gray-100",
             active && "opacity-60 border-emerald-500"
         )}>
             <div>
-                {highlight && <div className="bg-purple-600 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full w-fit mb-4 mx-auto">Mais Popular</div>}
-                <h4 className={clsx("text-2xl font-black mb-4 text-center", color)}>{name}</h4>
-                <div className="text-center mb-8">
-                    <p className="text-4xl font-black text-gray-900 tracking-tight">
-                        <span className="text-lg font-bold">MZN</span> {price}
-                    </p>
-                    <p className="text-gray-400 font-medium text-sm">por mês</p>
-                    <p className="text-[10px] text-gray-400 mt-1">ou MZN {annual} anual</p>
-                </div>
-                <ul className="space-y-4 mb-8">
+                <h4 className={clsx("text-xl font-black mb-4", color)}>{name}</h4>
+                <p className="text-3xl font-black text-gray-900 mb-6">MZN {price}<span className="text-xs text-gray-400 font-medium">/mês</span></p>
+                <ul className="space-y-3 mb-8">
                     {features.map((f: string, i: number) => (
-                        <li key={i} className="flex items-start gap-3 text-sm text-gray-600">
-                            <CheckCircle size={16} className="text-emerald-500 shrink-0 mt-0.5" />
-                            {f}
+                        <li key={i} className="flex items-center gap-2 text-xs text-gray-600">
+                            <CheckCircle size={14} className="text-emerald-500" /> {f}
                         </li>
                     ))}
                 </ul>
             </div>
-            <div className="space-y-4">
-                {!active && (
-                    <div className="space-y-3">
-                        <button
-                            className={clsx("w-full py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2", btnClass, checkingOut && "cursor-default opacity-80")}
-                            disabled={checkingOut}
-                            onClick={() => handlePayPal('month')}
-                        >
-                            {checkingOut ? <Loader2 className="animate-spin" /> : 'Pagar via PayPal (Mensal)'}
-                        </button>
-
-                        <div id={`paypal-button-container-${name}`} className="mt-2 min-h-[40px] z-50"></div>
-                    </div>
-                )}
-                {active && (
-                    <div className="w-full py-4 rounded-2xl bg-emerald-50 text-emerald-700 font-bold flex items-center justify-center gap-2 border border-emerald-100">
-                        <CheckCircle size={20} /> Plano Atual Ativo
-                    </div>
-                )}
-            </div>
+            {!active && (
+                <div className="space-y-3">
+                    <button onClick={() => handlePayPal('month')} className={clsx("w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2", btnClass)}>
+                        {checkingOut ? <Loader2 className="animate-spin" size={18} /> : 'Assinar Agora'}
+                    </button>
+                    <div id={`paypal-button-container-${name}`} className="min-h-[40px]"></div>
+                </div>
+            )}
+            {active && (
+                <div className="w-full py-3 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-bold flex items-center justify-center gap-2">
+                    <CheckCircle size={18} /> Plano Ativo
+                </div>
+            )}
         </div>
     );
 }
 
-function TabButton({ active, onClick, icon, children }: { active: boolean, onClick: () => void, icon: React.ReactNode, children: React.ReactNode }) {
+function TabButton({ active, onClick, icon, children }: any) {
     return (
-        <button
-            onClick={onClick}
-            className={clsx(
-                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
-                active ? "bg-purple-600 text-white shadow-md shadow-purple-600/20" : "bg-white text-gray-600 hover:bg-gray-100 border border-transparent"
-            )}
-        >
-            {icon}
-            {children}
+        <button onClick={onClick} className={clsx(
+            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap",
+            active ? "bg-purple-600 text-white shadow-lg shadow-purple-600/20" : "bg-white text-gray-500 hover:bg-gray-100"
+        )}>
+            {icon} {children}
         </button>
-    )
+    );
 }
