@@ -127,102 +127,189 @@ export default function BookingPublicPage() {
     <meta charset="UTF-8">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #ffffff; padding: 20px; }
-        .ticket { 
-            width: 400px; 
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
             background: #ffffff; 
-            border-radius: 40px; 
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .ticket { 
+            width: 420px; 
+            background: #ffffff; 
+            border-radius: 50px; 
             overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-            border: 1px solid #e5e7eb;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.12);
+            border: 1px solid #e2e8f0;
+            position: relative;
         }
         .header { 
-            background: #111827; 
-            padding: 40px 30px; 
-            color: #ffffff; 
+            background: linear-gradient(135deg, #111827 0%, #1e293b 100%);
+            padding: 45px 35px; 
+            color: #ffffff;
+            position: relative;
         }
         .header h1 { 
-            font-size: 24px; 
+            font-size: 28px; 
             font-weight: 900; 
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            letter-spacing: -1px;
         }
-        .header .purple { color: #a855f7; }
+        .header .purple { 
+            color: #a855f7;
+            text-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+        }
         .header .subtitle { 
             font-size: 10px; 
             color: #94a3b8; 
             text-transform: uppercase;
-            font-weight: bold;
+            font-weight: 800;
+            letter-spacing: 2px;
+        }
+        .header .id-box { 
+            position: absolute;
+            top: 45px;
+            right: 35px;
+            text-align: right;
+        }
+        .header .id-label {
+            font-size: 9px;
+            color: #94a3b8;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 3px;
         }
         .header .id { 
-            text-align: right; 
-            font-size: 16px; 
+            font-size: 20px; 
             font-weight: 900; 
-            color: #a855f7; 
-            margin-top: -30px;
+            color: #a855f7;
+            text-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
         }
-        .body { padding: 35px 30px; }
+        .body { padding: 40px 35px; background: #ffffff; }
         .salon-name { 
-            font-size: 22px; 
+            font-size: 26px; 
             font-weight: 900; 
-            color: #111827; 
-            margin-bottom: 5px;
+            color: #0f172a; 
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
         }
         .brand { 
             font-size: 11px; 
-            color: #6b7280; 
-            margin-bottom: 30px;
+            color: #64748b; 
+            margin-bottom: 35px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
         .info-grid { 
             display: grid; 
             grid-template-columns: 1fr 1fr; 
-            gap: 25px; 
-            margin-bottom: 30px;
+            gap: 30px; 
+            margin-bottom: 35px;
         }
         .info-label { 
             font-size: 9px; 
-            color: #9ca3af; 
-            font-weight: bold; 
+            color: #94a3b8; 
+            font-weight: 800; 
             text-transform: uppercase; 
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            letter-spacing: 1.5px;
         }
         .info-value { 
-            font-size: 16px; 
+            font-size: 17px; 
             font-weight: 900; 
-            color: #1e293b; 
+            color: #1e293b;
+            line-height: 1.3;
         }
-        .info-value.purple { color: #9333ea; }
-        .info-value.large { font-size: 20px; }
+        .info-value.purple { 
+            color: #9333ea;
+            font-size: 15px;
+            margin-top: 5px;
+        }
+        .info-value.large { 
+            font-size: 24px;
+            margin-top: 5px;
+        }
+        .info-right { text-align: right; }
         .client-box { 
-            background: #f8fafc; 
-            padding: 25px; 
-            border-radius: 30px; 
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 30px; 
+            border-radius: 35px; 
             display: flex; 
             justify-content: space-between; 
             align-items: center;
-            border: 1px solid #f1f5f9;
+            border: 2px solid #e2e8f0;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.03);
         }
+        .client-info { flex: 1; }
         .client-name { 
-            font-size: 18px; 
+            font-size: 20px; 
             font-weight: 900; 
             color: #0f172a; 
             text-transform: uppercase; 
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
         }
         .client-id { 
-            font-size: 14px; 
+            font-size: 16px; 
             color: #9333ea; 
-            font-weight: 900; 
+            font-weight: 900;
+            letter-spacing: 0.5px;
         }
         .qr-box { 
             background: #ffffff; 
-            padding: 10px; 
-            border-radius: 15px; 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            padding: 12px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            border: 2px solid #f1f5f9;
         }
         .qr-box img { 
-            width: 60px; 
-            height: 60px; 
-            display: block; 
+            width: 70px; 
+            height: 70px; 
+            display: block;
+            border-radius: 8px;
+        }
+        .footer {
+            padding: 25px 35px;
+            text-align: center;
+            border-top: 2px dashed #e2e8f0;
+            background: #fafbfc;
+        }
+        .footer-text {
+            font-size: 10px;
+            color: #94a3b8;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+        .footer-brand {
+            font-size: 14px;
+            font-weight: 900;
+            color: #9333ea;
+            letter-spacing: 0.5px;
+        }
+        /* Decorative notches */
+        .notch-left {
+            position: absolute;
+            left: -14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 28px;
+            background: #f9fafb;
+            border-radius: 50%;
+            border: 2px solid #e2e8f0;
+        }
+        .notch-right {
+            position: absolute;
+            right: -14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 28px;
+            background: #f9fafb;
+            border-radius: 50%;
+            border: 2px solid #e2e8f0;
         }
     </style>
 </head>
@@ -231,7 +318,10 @@ export default function BookingPublicPage() {
         <div class="header">
             <h1>Xonguile<span class="purple">App</span></h1>
             <div class="subtitle">Comprovativo de Reserva</div>
-            <div class="id">#${String(result.app?.id || result.id || '0000').padStart(4, '0')}</div>
+            <div class="id-box">
+                <div class="id-label">ID Reserva</div>
+                <div class="id">#${String(result.app?.id || result.id || '0000').padStart(4, '0')}</div>
+            </div>
         </div>
         <div class="body">
             <div class="salon-name">${salon?.name || 'Salão'}</div>
@@ -243,7 +333,7 @@ export default function BookingPublicPage() {
                     <div class="info-value">${selectedService?.name}</div>
                     <div class="info-value purple">MZN ${selectedService?.price}</div>
                 </div>
-                <div style="text-align: right;">
+                <div class="info-right">
                     <div class="info-label">Data e Hora</div>
                     <div class="info-value">${DateTime.fromISO(selectedDate).toFormat('dd/MM/yyyy')}</div>
                     <div class="info-value large">${selectedTime}</div>
@@ -251,16 +341,22 @@ export default function BookingPublicPage() {
             </div>
             
             <div class="client-box">
-                <div>
-                    <div class="info-label">Cliente</div>
+                <div class="client-info">
+                    <div class="info-label">Titular da Conta</div>
                     <div class="client-name">${clientData.name}</div>
                     <div class="client-id">${result.client?.xonguileId || xonguileId || 'XON-NEW'}</div>
                 </div>
                 <div class="qr-box">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BOOKING:${result.app?.id || result.id}|${result.client?.xonguileId || xonguileId}" />
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=111827&data=BOOKING:${result.app?.id || result.id}|ID:${result.client?.xonguileId || xonguileId}" crossorigin="anonymous" />
                 </div>
             </div>
         </div>
+        <div class="footer">
+            <div class="footer-text">Comprovativo aceite em todos os parceiros Xonguile</div>
+            <div class="footer-brand">Xonguile Network</div>
+        </div>
+        <div class="notch-left"></div>
+        <div class="notch-right"></div>
     </div>
 </body>
 </html>`;
