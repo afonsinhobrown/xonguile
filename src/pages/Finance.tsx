@@ -3,12 +3,13 @@ import { api } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
-import { Plus, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, BarChart3, PieChart, FileText, Sparkles, Lock } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { clsx } from 'clsx';
 import { DateTime } from 'luxon';
+import { Link } from 'react-router-dom';
 
 const transactionSchema = z.object({
     description: z.string().min(2, 'Descrição obrigatória'),
@@ -24,6 +25,9 @@ export default function FinancePage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const user = JSON.parse(localStorage.getItem('salao_user') || '{}');
+    const license = user?.salon?.License || {};
+    const reportLevel = license.reportLevel || 1; // 1: Basic, 2: Extended, 3: Full
 
     const loadData = async () => {
         setLoading(true);
@@ -105,6 +109,39 @@ export default function FinancePage() {
                             <p className={clsx("text-2xl font-bold", balance >= 0 ? "text-blue-800" : "text-red-800")}>{formatMoney(balance)}</p>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            {/* Reports Section */}
+            <div className="px-8 mt-8">
+                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2 uppercase tracking-widest text-[10px]">
+                    <BarChart3 size={14} className="text-purple-600" />
+                    Central de Relatórios
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <ReportButton
+                        label="Fluxo Diário"
+                        icon={<FileText size={18} />}
+                        active={true}
+                    />
+                    <ReportButton
+                        label="Vendas por Serviço"
+                        icon={<PieChart size={18} />}
+                        active={reportLevel >= 2}
+                        isPremium={reportLevel < 2}
+                    />
+                    <ReportButton
+                        label="Comissões"
+                        icon={<Users size={18} />}
+                        active={reportLevel >= 2}
+                        isPremium={reportLevel < 2}
+                    />
+                    <ReportButton
+                        label="BI Avançado"
+                        icon={<Sparkles size={18} />}
+                        active={reportLevel >= 3}
+                        isPremium={reportLevel < 3}
+                    />
                 </div>
             </div>
 
@@ -211,5 +248,28 @@ export default function FinancePage() {
                 </form>
             </Modal>
         </div>
+    );
+}
+
+function ReportButton({ label, icon, active, isPremium }: { label: string, icon: React.ReactNode, active: boolean, isPremium?: boolean }) {
+    if (isPremium) {
+        return (
+            <Link to="/admin/configuracoes" className="flex items-center gap-3 p-4 bg-gray-50 border border-gray-100 rounded-xl relative overflow-hidden group hover:bg-white hover:border-purple-200 transition-all">
+                <div className="text-gray-400">{icon}</div>
+                <div className="flex flex-col">
+                    <span className="text-sm font-bold text-gray-400 group-hover:text-purple-600 transition-colors">{label}</span>
+                    <span className="text-[10px] text-purple-600 font-black uppercase flex items-center gap-1">
+                        <Lock size={10} /> Upgrade
+                    </span>
+                </div>
+            </Link>
+        );
+    }
+
+    return (
+        <button className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-xl hover:shadow-md hover:border-purple-200 transition-all" disabled={!active}>
+            <div className="text-purple-600">{icon}</div>
+            <span className="text-sm font-bold text-gray-800">{label}</span>
+        </button>
     );
 }

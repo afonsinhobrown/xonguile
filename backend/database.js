@@ -48,9 +48,12 @@ const Salon = sequelize.define('Salon', {
 // 2. The License (Control Access)
 const License = sequelize.define('License', {
     key: { type: DataTypes.STRING, unique: true },
-    type: { type: DataTypes.ENUM('trial', 'monthly', 'yearly', 'lifetime'), defaultValue: 'trial' },
+    type: { type: DataTypes.ENUM('trial', 'standard_month', 'standard_year', 'gold_month', 'gold_year', 'premium_month', 'premium_year'), defaultValue: 'trial' },
     status: { type: DataTypes.ENUM('active', 'expired', 'suspended'), defaultValue: 'active' },
-    validUntil: { type: DataTypes.DATE, allowNull: false }
+    validUntil: { type: DataTypes.DATE, allowNull: false },
+    bookingLimit: { type: DataTypes.INTEGER, defaultValue: 50 }, // 50, 70, or 999999 for unlimited
+    hasWaitingList: { type: DataTypes.BOOLEAN, defaultValue: false }, // Premium only
+    reportLevel: { type: DataTypes.INTEGER, defaultValue: 1 } // 1: basic, 2: extended, 3: full
 });
 
 // 3. The User (Login)
@@ -58,7 +61,8 @@ const User = sequelize.define('User', {
     name: DataTypes.STRING,
     email: { type: DataTypes.STRING, unique: true, allowNull: false },
     password: { type: DataTypes.STRING, allowNull: false }, // In prod, hash this!
-    role: { type: DataTypes.ENUM('superadmin', 'admin', 'professional', 'reception'), defaultValue: 'admin' }
+    role: { type: DataTypes.ENUM('super_level_1', 'super_level_2', 'admin', 'professional', 'reception'), defaultValue: 'admin' },
+    parentId: DataTypes.INTEGER // For tracking which super_level_1 created which super_level_2
 });
 
 // --- SALON DATA MODELS (All must have SalonId) ---

@@ -2,15 +2,19 @@ import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Save, Building, Receipt, Users, Trash2, Plus, Upload } from 'lucide-react';
+import { Save, Building, Receipt, Users, Trash2, Plus, Upload, Sparkles, CheckCircle } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useForm } from 'react-hook-form';
+import { DateTime } from 'luxon';
+import { Link } from 'react-router-dom';
 
 export default function SettingsPage() {
-    const [activeTab, setActiveTab] = useState<'salon' | 'receipt' | 'users'>('salon');
+    const [activeTab, setActiveTab] = useState<'salon' | 'receipt' | 'users' | 'plans'>('salon');
     const [loading, setLoading] = useState(false);
     const [users, setUsers] = useState<any[]>([]);
     const [salon, setSalon] = useState<any>({});
+    const currentUser = JSON.parse(localStorage.getItem('salao_user') || '{}');
+    const license = salon?.License || {};
 
     // Salon Form
     const { register: registerSalon, handleSubmit: handleSalon, setValue: setSalonValue } = useForm();
@@ -87,6 +91,7 @@ export default function SettingsPage() {
                     <TabButton active={activeTab === 'salon'} onClick={() => setActiveTab('salon')} icon={<Building size={18} />}>Dados do Salão</TabButton>
                     <TabButton active={activeTab === 'receipt'} onClick={() => setActiveTab('receipt')} icon={<Receipt size={18} />}>Configurar Recibo</TabButton>
                     <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<Users size={18} />}>Gestão de Usuários</TabButton>
+                    <TabButton active={activeTab === 'plans'} onClick={() => setActiveTab('plans')} icon={<Sparkles size={18} />}>Plano e Assinatura</TabButton>
                 </div>
             </header>
 
@@ -219,7 +224,116 @@ export default function SettingsPage() {
                         </div>
                     </div>
                 )}
+
+                {/* PLANS & SUBSCRIPTION TAB */}
+                {activeTab === 'plans' && (
+                    <div className="space-y-10 animate-in fade-in duration-500">
+                        {/* Current Plan Header */}
+                        <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-[2rem] p-8 text-white shadow-xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+                            <div className="relative">
+                                <p className="text-purple-100 text-sm font-bold uppercase tracking-widest mb-2">Seu Plano Atual</p>
+                                <h3 className="text-4xl font-black mb-4 capitalize">
+                                    {license.type?.replace('_', ' ') || 'Teste Grátis'}
+                                </h3>
+                                <div className="flex items-center gap-2 text-purple-100 text-sm">
+                                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                                    Status: <span className="font-bold text-white uppercase">{license.status}</span>
+                                    <span className="mx-2">•</span>
+                                    Expira em: <span className="font-bold text-white">{DateTime.fromISO(license.validUntil).toFormat('dd/MM/yyyy')}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Plan Comparison */}
+                        <div>
+                            <div className="text-center mb-8">
+                                <h2 className="text-3xl font-black text-gray-900 mb-2">Escolha o plano ideal</h2>
+                                <p className="text-gray-500">Escala as funcionalidades de acordo com o crescimento do seu salão</p>
+                            </div>
+
+                            <div className="grid md:grid-cols-3 gap-6">
+                                <PlanCard
+                                    name="Standard"
+                                    price="1.800"
+                                    annual="19.000"
+                                    features={[
+                                        "Até 50 agendamentos mensais",
+                                        "Gestão de Profissionais",
+                                        "Controle de Serviços",
+                                        "Relatórios Básicos",
+                                    ]}
+                                    color="text-gray-600"
+                                    btnClass="bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                    active={license.type?.includes('standard')}
+                                />
+                                <PlanCard
+                                    name="Gold"
+                                    price="2.500"
+                                    annual="22.000"
+                                    features={[
+                                        "Até 70 agendamentos mensais",
+                                        "Gestão de Estoque Completa",
+                                        "Relatórios de Vendas e Serviços",
+                                        "Suporte Prioritário",
+                                    ]}
+                                    color="text-purple-600 border-purple-200"
+                                    highlight
+                                    btnClass="bg-purple-600 text-white hover:bg-purple-700"
+                                    active={license.type?.includes('gold')}
+                                />
+                                <PlanCard
+                                    name="Premium"
+                                    price="3.000"
+                                    annual="28.000"
+                                    features={[
+                                        "Agendamentos Ilimitados",
+                                        "Fila de Espera Digital",
+                                        "Relatórios Avançados e BI",
+                                        "Sem anúncios Xonguile",
+                                    ]}
+                                    color="text-indigo-600 border-indigo-200"
+                                    btnClass="bg-indigo-600 text-white hover:bg-indigo-700"
+                                    active={license.type?.includes('premium')}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
+        </div>
+    );
+}
+
+function PlanCard({ name, price, annual, features, color, highlight, btnClass, active }: any) {
+    return (
+        <div className={clsx(
+            "p-8 rounded-[2.5rem] bg-white border-2 flex flex-col justify-between transition-all hover:shadow-2xl",
+            highlight ? "border-purple-600 scale-105 shadow-xl z-10" : "border-gray-100",
+            active && "opacity-60 grayscale-[0.5]"
+        )}>
+            <div>
+                {highlight && <div className="bg-purple-600 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full w-fit mb-4 mx-auto">Mais Popular</div>}
+                <h4 className={clsx("text-2xl font-black mb-4 text-center", color)}>{name}</h4>
+                <div className="text-center mb-8">
+                    <p className="text-4xl font-black text-gray-900 tracking-tight">
+                        <span className="text-lg font-bold">MZN</span> {price}
+                    </p>
+                    <p className="text-gray-400 font-medium text-sm">por mês</p>
+                    <p className="text-[10px] text-gray-400 mt-1">ou MZN {annual} anual</p>
+                </div>
+                <ul className="space-y-4 mb-8">
+                    {features.map((f: string, i: number) => (
+                        <li key={i} className="flex items-start gap-3 text-sm text-gray-600">
+                            <CheckCircle size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                            {f}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+            <button className={clsx("w-full py-4 rounded-2xl font-bold transition-all", btnClass, active && "cursor-default")} disabled={active}>
+                {active ? 'Plano Atual' : 'Assinar Agora'}
+            </button>
         </div>
     );
 }

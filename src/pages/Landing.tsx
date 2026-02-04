@@ -170,6 +170,38 @@ export default function LandingPage() {
                 </div>
             </section>
 
+            {/* --- Pricing Section --- */}
+            <section id="planos" className="py-24 bg-white relative overflow-hidden">
+                <div className="max-w-7xl mx-auto px-6 relative z-10">
+                    <div className="text-center max-w-2xl mx-auto mb-16">
+                        <h3 className="text-4xl font-black text-gray-900 mb-4">Escolha o plano para o seu negócio</h3>
+                        <p className="text-gray-600">Preços transparentes para escalar o seu salão.</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-8">
+                        <LandingPlanCard
+                            name="Standard"
+                            price="1.800"
+                            annual="19.000"
+                            features={["Até 50 agendamentos", "Gestão de Equipa", "Controle de Serviços", "Relatórios Diários"]}
+                        />
+                        <LandingPlanCard
+                            name="Gold"
+                            price="2.500"
+                            annual="22.000"
+                            highlight
+                            features={["Até 70 agendamentos", "Gestão de Estoque", "Relatórios Estendidos", "Suporte VIP"]}
+                        />
+                        <LandingPlanCard
+                            name="Premium"
+                            price="3.000"
+                            annual="28.000"
+                            features={["Agendamentos Ilimitados", "Fila de Espera Digital", "BI Avançado", "Sem anúncios"]}
+                        />
+                    </div>
+                </div>
+            </section>
+
             {/* --- Footer --- */}
             <footer className="bg-gray-900 border-t border-gray-800 pt-16 pb-8">
                 <div className="max-w-7xl mx-auto px-6">
@@ -210,4 +242,38 @@ function FeatureCard({ icon, title, description }: { icon: any, title: string, d
             </p>
         </div>
     )
+}
+
+function LandingPlanCard({ name, price, annual, features, highlight }: any) {
+    return (
+        <div className={clsx(
+            "p-10 rounded-[2.5rem] bg-white border-2 flex flex-col justify-between transition-all hover:shadow-2xl",
+            highlight ? "border-purple-600 shadow-xl z-10 rotate-1" : "border-gray-100"
+        )}>
+            <div>
+                <h4 className="text-2xl font-black mb-6 text-gray-900">{name}</h4>
+                <div className="mb-8">
+                    <p className="text-5xl font-black text-gray-900 tracking-tight">
+                        <span className="text-xl font-bold">MZN</span> {price}
+                    </p>
+                    <p className="text-gray-500 font-bold">por mês</p>
+                    <p className="text-xs text-gray-400 mt-1 italic">MZN {annual} no plano anual</p>
+                </div>
+                <ul className="space-y-4 mb-8">
+                    {features.map((f: string, i: number) => (
+                        <li key={i} className="flex items-center gap-3 text-gray-600 font-medium">
+                            <CheckCircle size={18} className="text-emerald-500" />
+                            {f}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+            <Link to="/register" className={clsx(
+                "w-full py-5 rounded-2xl font-bold text-center transition-all",
+                highlight ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30 hover:bg-purple-700" : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+            )}>
+                Assinar Plano
+            </Link>
+        </div>
+    );
 }

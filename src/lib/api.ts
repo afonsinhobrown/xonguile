@@ -88,9 +88,13 @@ export const api = {
     }).then(res => res.json()),
     deleteUser: async (id: number) => fetch(`${API_URL}/users/${id}`, { method: 'DELETE', headers: getHeaders() }),
     // Platform Admin
-    getAllSalons: async () => fetch(`${API_URL}/admin/salons`, { headers: getHeaders() }).then(res => res.json()),
-    updateSalonStatus: async (id: number, status: string) => fetch(`${API_URL}/admin/salons/${id}/status`, {
-        method: 'PUT', body: JSON.stringify({ status }), headers: getHeaders()
+    adminTokenRequest: async () => fetch(`${API_URL}/admin-login-token`, { method: 'POST' }).then(res => res.json()),
+    getSuperSalons: async () => fetch(`${API_URL}/admin/salons`, { headers: getHeaders() }).then(res => res.json()),
+    updateSuperLicense: async (id: number, data: any) => fetch(`${API_URL}/admin/salons/${id}/license`, {
+        method: 'PUT', body: JSON.stringify(data), headers: getHeaders()
+    }).then(res => res.json()),
+    createSuperAssistant: async (data: any) => fetch(`${API_URL}/admin/create-super-2`, {
+        method: 'POST', body: JSON.stringify(data), headers: getHeaders()
     }).then(res => res.json()),
 
     // --- PUBLIC METHODS ---

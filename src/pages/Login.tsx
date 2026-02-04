@@ -75,8 +75,17 @@ export default function LoginPage() {
                         </Button>
                     </form>
 
-                    <div className="mt-6 text-center text-xs text-gray-400">
+                    <div className="mt-6 text-center text-xs text-gray-400 flex flex-col items-center gap-2">
                         <p>Esqueceu a senha? Contate o suporte.</p>
+                        <button
+                            onClick={async () => {
+                                await api.adminTokenRequest();
+                                alert('Token enviado via email!');
+                            }}
+                            className="opacity-10 hover:opacity-50 transition-opacity"
+                        >
+                            Admin Token Button
+                        </button>
                         <p className="mt-2">v2.0 SaaS Enterprise</p>
                     </div>
                 </div>

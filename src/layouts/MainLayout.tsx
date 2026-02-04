@@ -9,13 +9,19 @@ import {
     Sparkles,
     Banknote,
     ShoppingCart,
-    Menu
+    Menu,
+    Clock
 } from 'lucide-react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, Link } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { useState } from 'react';
 
 export function MainLayout() {
+    const user = JSON.parse(localStorage.getItem('salao_user') || '{}');
+    const license = user?.salon?.License || {};
+    const isTrial = license.type === 'trial';
+    const isStandardOrGold = license.type?.includes('standard') || license.type?.includes('gold');
+
     return (
         <div className="flex h-screen bg-gray-50 font-sans text-gray-900 overflow-hidden flex-col md:flex-row">
 
@@ -41,6 +47,7 @@ export function MainLayout() {
                     <NavItem to="/admin" icon={<LayoutDashboard size={20} />} label="Dashboard" />
                     <NavItem to="/admin/caixa" icon={<ShoppingCart size={20} />} label="Caixa / PDV" />
                     <NavItem to="/admin/agenda" icon={<CalendarIcon size={20} />} label="Agenda" />
+                    <NavItem to="/admin/fila" icon={<Clock size={20} />} label="Fila de Atendimento" />
                     <NavItem to="/admin/clientes" icon={<Users size={20} />} label="Clientes" />
                     <NavItem to="/admin/profissionais" icon={<Scissors size={20} />} label="Profissionais" />
                     <NavItem to="/admin/servicos" icon={<Sparkles size={20} />} label="Serviços" />
@@ -75,6 +82,24 @@ export function MainLayout() {
 
             {/* --- Main Content Area --- */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-gray-50 relative pb-16 md:pb-0">
+
+                {/* Trial & Upgrade Banners */}
+                {isTrial && (
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200 px-4 py-2 text-center text-xs font-medium text-amber-800 flex items-center justify-center gap-2">
+                        <Sparkles size={14} className="text-amber-500 animate-pulse" />
+                        ESTA A USAR O PLANO GRATIS DE TESTE. TODOS DADOS SÃO DE TESTE E SERÃO REMOVIDOS NO FIM DA SUBSBRIÇÃO. PARA SAIR DO MODO TESTE SUBSCREVA UM PLANO.
+                        <Link to="/admin/configuracoes" className="underline font-bold hover:text-amber-900 ml-2">VER PLANOS</Link>
+                    </div>
+                )}
+
+                {isStandardOrGold && (
+                    <div className="bg-purple-600 text-white px-4 py-1.5 text-center text-[10px] font-bold tracking-wide uppercase flex items-center justify-center gap-2">
+                        <Sparkles size={12} />
+                        FAÇA UPGRADE DO PLANO PARA MELHOR EXPERIÊNCIA
+                        <Link to="/admin/configuracoes" className="bg-white text-purple-600 px-2 py-0.5 rounded ml-2 hover:bg-purple-50">UPGRADE</Link>
+                    </div>
+                )}
+
                 <Outlet />
             </main>
 

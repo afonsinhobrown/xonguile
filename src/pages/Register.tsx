@@ -100,11 +100,20 @@ export default function RegisterPage() {
                         />
 
                         <div className="pt-2">
-                            <Button className="w-full py-3 text-lg font-bold shadow-purple-600/20" disabled={loading}>
-                                {loading ? <Loader2 className="animate-spin" /> : 'Começar Teste Grátis'}
+                            <Button className="w-full py-4 text-lg font-bold shadow-purple-600/20" disabled={loading}>
+                                {loading ? <Loader2 className="animate-spin" /> : 'Criar Conta e Começar Teste Grátis'}
                             </Button>
                         </div>
                     </form>
+
+                    <div className="mt-8 border-t border-gray-100 pt-6">
+                        <p className="text-center text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Planos após o teste grátis</p>
+                        <div className="grid grid-cols-3 gap-2">
+                            <PlanSmall name="Standard" price="1.800" />
+                            <PlanSmall name="Gold" price="2.500" highlight />
+                            <PlanSmall name="Premium" price="3.000" />
+                        </div>
+                    </div>
 
                     <div className="mt-6 text-center text-sm">
                         <p className="text-gray-500">Já tem uma conta?</p>
@@ -112,6 +121,19 @@ export default function RegisterPage() {
                     </div>
                 </div>
             </div>
+        </div>
+    );
+}
+
+function PlanSmall({ name, price, highlight }: any) {
+    return (
+        <div className={clsx(
+            "p-3 rounded-xl border text-center transition-all",
+            highlight ? "border-purple-200 bg-purple-50" : "border-gray-100"
+        )}>
+            <p className="text-[10px] font-bold text-gray-400 uppercase">{name}</p>
+            <p className={clsx("text-sm font-black", highlight ? "text-purple-600" : "text-gray-800")}>{price}</p>
+            <p className="text-[8px] text-gray-400 italic">MT/mês</p>
         </div>
     );
 }

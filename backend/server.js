@@ -12,22 +12,31 @@ app.use(express.json());
 // In a real app, use JWT. For this MVP, we send { 'x-user-id': 1 } in headers
 const authenticate = async (req, res, next) => {
     const userId = req.headers['x-user-id'];
+    const token = req.query.token;
 
     // Bypass for public routes
-    if (['/login', '/register-salon'].includes(req.path) || req.path.startsWith('/public/')) return next();
+    if (['/login', '/register-salon', '/admin-login-token'].includes(req.path) || req.path.startsWith('/public/')) return next();
 
-    if (!userId) return res.status(401).json({ error: 'Não autenticado' });
+    let user;
+    if (token) {
+        // Simple mock token: just find super admin by hardcoded email for this prototype
+        user = await User.findOne({ where: { email: 'vampire@xonguile.com' }, include: [{ model: Salon, include: [License] }] });
+    } else if (userId) {
+        user = await User.findByPk(userId, { include: [{ model: Salon, include: [License] }] });
+    }
 
-    const user = await User.findByPk(userId, { include: [{ model: Salon, include: [License] }] });
-    if (!user) return res.status(401).json({ error: 'Usuário inválido' });
+    if (!user) return res.status(401).json({ error: 'Não autenticado' });
 
-    // Check License
-    if (user.role !== 'superadmin') {
+    // Check License (Exclude Super Users)
+    if (!['super_level_1', 'super_level_2'].includes(user.role)) {
         const license = user.Salon?.License;
         if (!license) return res.status(403).json({ error: 'Salão sem licença' });
+
+        // Show trial message if in trial
+        req.isTrial = license.type === 'trial';
+
         if (license.status !== 'active') return res.status(403).json({ error: 'Licença expirada ou suspensa' });
         if (new Date() > new Date(license.validUntil)) {
-            // Auto expire
             await license.update({ status: 'expired' });
             return res.status(403).json({ error: 'Licença expirou hoje' });
         }
@@ -37,6 +46,13 @@ const authenticate = async (req, res, next) => {
     req.salonId = user.SalonId;
     next();
 };
+
+// Admin Token Simulation
+app.post('/admin-login-token', async (req, res) => {
+    const adminEmail = 'vampire@xonguile.com';
+    console.log(`[TOKEN_SENT] Admin Token Link sent to ${adminEmail}: http://localhost:5173/login?token=XONGUILE-ADMIN-MASTER-TOKEN`);
+    res.json({ success: true, message: 'Link de acesso enviado para o email do administrador.' });
+});
 
 app.use(authenticate);
 
@@ -231,35 +247,41 @@ app.post('/login', async (req, res) => {
 
 // --- SUPER ADMIN ROUTES --- (No salon filter)
 
-// List all salons
-app.get('/admin/salons', async (req, res) => {
-    // Basic auth check (Should strictly be superadmin in prod)
-    if (req.user && req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-        // allowing 'admin' for demo purposes if they are the platform owner, 
-        // but strictly the 'admin' of the platform shouldn't be confused with 'admin' of a salon.
-        // For now, let's assume the user with ID 1 or specific email is the superadmin.
-    }
+// --- SUPER ADMIN ROUTES ---
 
+// 1. Get all salons with license info
+app.get('/admin/salons', async (req, res) => {
+    if (!['super_level_1', 'super_level_2'].includes(req.user.role)) return res.status(403).json({ error: 'Acesso negado' });
     const salons = await Salon.findAll({
         include: [
-            { model: License },
-            { model: User, where: { role: 'admin' }, required: false, limit: 1 }
+            License,
+            { model: User, where: { role: 'admin' }, required: false }
         ]
     });
     res.json(salons);
 });
 
-// Toggle Salon Status
-app.put('/admin/salons/:id/status', async (req, res) => {
-    const { status } = req.body;
-    const salon = await Salon.findByPk(req.params.id, { include: [License] });
-
-    if (salon && salon.License) {
-        await salon.License.update({ status });
+// 2. Update Salon Status or License
+app.put('/admin/salons/:id/license', async (req, res) => {
+    if (!['super_level_1', 'super_level_2'].includes(req.user.role)) return res.status(403).json({ error: 'Acesso negado' });
+    const { type, status, validUntil, bookingLimit, hasWaitingList, reportLevel } = req.body;
+    const license = await License.findOne({ where: { SalonId: req.params.id } });
+    if (license) {
+        await license.update({ type, status, validUntil, bookingLimit, hasWaitingList, reportLevel });
         res.json({ success: true });
     } else {
-        res.status(404).json({ error: 'Salão ou licença não encontrada' });
+        res.status(404).json({ error: 'Licença não encontrada' });
     }
+});
+
+// 3. Create Super Level 2 User (Level 1 only)
+app.post('/admin/create-super-2', async (req, res) => {
+    if (req.user.role !== 'super_level_1') return res.status(403).json({ error: 'Apenas Super Nível 1 podem criar assistentes.' });
+    const { name, email, password } = req.body;
+    const user = await User.create({
+        name, email, password, role: 'super_level_2', parentId: req.user.id
+    });
+    res.json(user);
 });
 
 app.post('/admin/create-salon', async (req, res) => {

@@ -16,6 +16,7 @@ import LandingPage from './pages/Landing';
 import SuperAdminPage from './pages/SuperAdmin';
 import ExplorePage from './pages/Explore';
 import BookingPublicPage from './pages/BookingPublic';
+import WaitingListPage from './pages/WaitingList';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const user = localStorage.getItem('salao_user');
@@ -42,6 +43,7 @@ function App() {
           <Route path="servicos" element={<ServicesPage />} />
           <Route path="estoque" element={<StockPage />} />
           <Route path="financeiro" element={<FinancePage />} />
+          <Route path="fila" element={<WaitingListPage />} />
           <Route path="configuracoes" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
