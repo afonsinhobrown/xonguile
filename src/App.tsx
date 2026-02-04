@@ -14,6 +14,8 @@ import POSPage from './pages/POS';
 
 import LandingPage from './pages/Landing';
 import SuperAdminPage from './pages/SuperAdmin';
+import ExplorePage from './pages/Explore';
+import BookingPublicPage from './pages/BookingPublic';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const user = localStorage.getItem('salao_user');
@@ -27,6 +29,8 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/explorar" element={<ExplorePage />} />
+        <Route path="/agendar/:salonId" element={<BookingPublicPage />} />
 
         <Route path="/admin" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
           <Route index element={<DashboardPage />} />

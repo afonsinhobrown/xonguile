@@ -74,6 +74,7 @@ const Client = sequelize.define('Client', {
     name: DataTypes.STRING,
     phone: DataTypes.STRING,
     email: DataTypes.STRING,
+    xonguileId: { type: DataTypes.STRING, unique: true },
     notes: DataTypes.TEXT
 });
 

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { ArrowRight, Star, Scissors, Calendar, ShieldCheck, CheckCircle2, Menu } from 'lucide-react';
 
@@ -20,7 +20,7 @@ export default function LandingPage() {
 
                     <div className="hidden md:flex items-center gap-8">
                         <a href="#funcionalidades" className="text-sm font-medium text-gray-200 hover:text-white transition-colors">Funcionalidades</a>
-                        <a href="#saloes" className="text-sm font-medium text-gray-200 hover:text-white transition-colors">Salões</a>
+                        <Link to="/explorar" className="text-sm font-medium text-gray-200 hover:text-white transition-colors">Encontrar Salão</Link>
                         <a href="#precos" className="text-sm font-medium text-gray-200 hover:text-white transition-colors">Planos</a>
                     </div>
 
@@ -75,17 +75,17 @@ export default function LandingPage() {
 
                         <div className="flex flex-col sm:flex-row gap-4">
                             <button
-                                onClick={() => navigate('/register')}
+                                onClick={() => navigate('/explorar')}
                                 className="px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-bold text-lg transition-all shadow-lg shadow-purple-600/40 flex items-center justify-center gap-2 group"
                             >
-                                Começar Teste Grátis
-                                <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+                                Agendar um Serviço
+                                <Calendar size={20} className="group-hover:scale-110 transition-transform" />
                             </button>
                             <button
-                                onClick={() => navigate('/login')}
+                                onClick={() => navigate('/register')}
                                 className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-2xl font-bold text-lg transition-all backdrop-blur-sm"
                             >
-                                Já tenho conta
+                                Cadastrar meu Salão
                             </button>
                         </div>
 

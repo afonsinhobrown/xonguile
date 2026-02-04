@@ -13,8 +13,8 @@ app.use(express.json());
 const authenticate = async (req, res, next) => {
     const userId = req.headers['x-user-id'];
 
-    // Bypass for login/register
-    if (req.path === '/login' || req.path === '/register-salon' || req.path.startsWith('/admin/')) return next();
+    // Bypass for public routes
+    if (['/login', '/register-salon'].includes(req.path) || req.path.startsWith('/public/')) return next();
 
     if (!userId) return res.status(401).json({ error: 'Não autenticado' });
 
@@ -42,7 +42,113 @@ app.use(authenticate);
 
 // --- AUTH ROUTES ---
 
-// --- PUBLIC AUTH ROUTES ---
+// --- PUBLIC EXPLORATION & BOOKING ROUTES ---
+
+// 1. List all salons
+app.get('/public/salons', async (req, res) => {
+    const salons = await Salon.findAll({
+        include: [{ model: License, where: { status: 'active' } }]
+    });
+    res.json(salons);
+});
+
+// 2. Search salons by service
+app.get('/public/search-services', async (req, res) => {
+    const { q } = req.query;
+    const services = await Service.findAll({
+        where: {
+            name: { [require('sequelize').Op.iLike || require('sequelize').Op.like]: `%${q}%` },
+            active: true
+        },
+        include: [Salon]
+    });
+    // Group by salon to show a list of salons
+    const salons = services.map(s => s.Salon).filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+    res.json(salons);
+});
+
+// 3. Get salon details & services
+app.get('/public/salons/:id', async (req, res) => {
+    const salon = await Salon.findByPk(req.params.id, {
+        include: [Service, Professional]
+    });
+    res.json(salon);
+});
+
+// 4. Get available slots (Simplified: return 08:00 to 18:00 check against existing apps)
+app.get('/public/salons/:id/slots', async (req, res) => {
+    const { date } = req.query;
+    const apps = await Appointment.findAll({ where: { SalonId: req.params.id, date } });
+    const busyTimes = apps.map(a => a.startTime);
+
+    const slots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+    const available = slots.filter(s => !busyTimes.includes(s));
+    res.json(available);
+});
+
+// 5. Client Lookup
+app.get('/public/client-lookup', async (req, res) => {
+    const { xonguileId, phone, email } = req.query;
+    let client = null;
+    if (xonguileId) client = await Client.findOne({ where: { xonguileId } });
+    if (!client && phone) client = await Client.findOne({ where: { phone } });
+    if (!client && email) client = await Client.findOne({ where: { email } });
+
+    res.json(client);
+});
+
+// 6. Public Booking
+app.post('/public/book-appointment', async (req, res) => {
+    const { salonId, serviceId, date, startTime, clientData } = req.body;
+
+    try {
+        const result = await sequelize.transaction(async (t) => {
+            // Find or Create Client
+            let client = null;
+            if (clientData.xonguileId) client = await Client.findOne({ where: { xonguileId: clientData.xonguileId } }, { transaction: t });
+
+            if (!client) {
+                // Secondary check by phone/email to avoid duplicates
+                client = await Client.findOne({
+                    where: {
+                        [require('sequelize').Op.or]: [
+                            { phone: clientData.phone || 'ignore' },
+                            { email: clientData.email || 'ignore' }
+                        ]
+                    }
+                }, { transaction: t });
+            }
+
+            let isNew = false;
+            if (!client) {
+                client = await Client.create({
+                    ...clientData,
+                    SalonId: salonId,
+                    xonguileId: `XON-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+                }, { transaction: t });
+                isNew = true;
+            }
+
+            const service = await Service.findByPk(serviceId);
+
+            const app = await Appointment.create({
+                date,
+                startTime,
+                price: service.price,
+                status: 'scheduled',
+                SalonId: salonId,
+                ClientId: client.id,
+                ServiceId: serviceId
+            }, { transaction: t });
+
+            return { app, client, isNew };
+        });
+
+        res.json(result);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
 
 app.post('/register-salon', async (req, res) => {
     const { salonName, adminName, adminEmail, adminPassword, phone } = req.body;
