@@ -22,7 +22,7 @@ export default function LandingPage() {
                     <div className="hidden md:flex items-center gap-8">
                         <a href="#funcionalidades" className="text-sm font-medium text-gray-200 hover:text-white transition-colors">Funcionalidades</a>
                         <Link to="/explorar" className="text-sm font-medium text-gray-200 hover:text-white transition-colors">Encontrar Salão</Link>
-                        <a href="#precos" className="text-sm font-medium text-gray-200 hover:text-white transition-colors">Planos</a>
+                        <a href="#planos" className="text-sm font-medium text-gray-200 hover:text-white transition-colors">Planos</a>
                     </div>
 
                     <div className="flex items-center gap-4">

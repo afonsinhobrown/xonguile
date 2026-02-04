@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Save, Building, Receipt, Users, Trash2, Plus, Upload, Sparkles, CheckCircle } from 'lucide-react';
+import {
+    Save, Building, Receipt, Users, Trash2, Plus, Upload,
+    Sparkles, CheckCircle, Loader2, Shield, Lock, CreditCard
+} from 'lucide-react';
 import { clsx } from 'clsx';
 import { useForm } from 'react-hook-form';
 import { DateTime } from 'luxon';
@@ -14,7 +17,13 @@ export default function SettingsPage() {
     const [users, setUsers] = useState<any[]>([]);
     const [salon, setSalon] = useState<any>({});
     const currentUser = JSON.parse(localStorage.getItem('salao_user') || '{}');
-    const license = salon?.License || {};
+    const license = salon?.License || salon?.license || {};
+
+    useEffect(() => {
+        if (license.status && license.status !== 'active' && activeTab !== 'plans') {
+            setActiveTab('plans');
+        }
+    }, [license, activeTab]);
 
     // Salon Form
     const { register: registerSalon, handleSubmit: handleSalon, setValue: setSalonValue } = useForm();
@@ -257,6 +266,9 @@ export default function SettingsPage() {
                                     name="Standard"
                                     price="1.800"
                                     annual="19.000"
+                                    type="standard_month"
+                                    salonId={salon.id}
+                                    onSuccess={loadData}
                                     features={[
                                         "Até 50 agendamentos mensais",
                                         "Gestão de Profissionais",
@@ -271,6 +283,9 @@ export default function SettingsPage() {
                                     name="Gold"
                                     price="2.500"
                                     annual="22.000"
+                                    type="gold_month"
+                                    salonId={salon.id}
+                                    onSuccess={loadData}
                                     features={[
                                         "Até 70 agendamentos mensais",
                                         "Gestão de Estoque Completa",
@@ -286,6 +301,9 @@ export default function SettingsPage() {
                                     name="Premium"
                                     price="3.000"
                                     annual="28.000"
+                                    type="premium_month"
+                                    salonId={salon.id}
+                                    onSuccess={loadData}
                                     features={[
                                         "Agendamentos Ilimitados",
                                         "Fila de Espera Digital",
@@ -305,12 +323,29 @@ export default function SettingsPage() {
     );
 }
 
-function PlanCard({ name, price, annual, features, color, highlight, btnClass, active }: any) {
+function PlanCard({ name, price, annual, features, color, highlight, btnClass, active, salonId, type, onSuccess }: any) {
+    const [checkingOut, setCheckingOut] = useState(false);
+
+    const handlePayPal = async (billingCycle: 'month' | 'year') => {
+        if (!salonId) return alert('Carregando informações do salão...');
+        const finalType = type.replace('month', billingCycle);
+        setCheckingOut(true);
+        try {
+            await api.activateSubscription(salonId, finalType);
+            alert(`Plano ${name} (${billingCycle}) ativado!`);
+            onSuccess();
+        } catch (e) {
+            alert('Falha no pagamento');
+        } finally {
+            setCheckingOut(false);
+        }
+    };
+
     return (
         <div className={clsx(
             "p-8 rounded-[2.5rem] bg-white border-2 flex flex-col justify-between transition-all hover:shadow-2xl",
             highlight ? "border-purple-600 scale-105 shadow-xl z-10" : "border-gray-100",
-            active && "opacity-60 grayscale-[0.5]"
+            active && "opacity-60 border-emerald-500"
         )}>
             <div>
                 {highlight && <div className="bg-purple-600 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full w-fit mb-4 mx-auto">Mais Popular</div>}
@@ -331,8 +366,12 @@ function PlanCard({ name, price, annual, features, color, highlight, btnClass, a
                     ))}
                 </ul>
             </div>
-            <button className={clsx("w-full py-4 rounded-2xl font-bold transition-all", btnClass, active && "cursor-default")} disabled={active}>
-                {active ? 'Plano Atual' : 'Assinar Agora'}
+            <button
+                className={clsx("w-full py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2", btnClass, (active || checkingOut) && "cursor-default opacity-80")}
+                disabled={active || checkingOut}
+                onClick={handlePayPal}
+            >
+                {checkingOut ? <Loader2 className="animate-spin" /> : active ? 'Plano Atual Ativo' : 'Assinar via PayPal'}
             </button>
         </div>
     );

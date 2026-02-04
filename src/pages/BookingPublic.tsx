@@ -23,6 +23,8 @@ export default function BookingPublicPage() {
     const [selectedDate, setSelectedDate] = useState(DateTime.now().toISODate());
     const [selectedTime, setSelectedTime] = useState('');
     const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+    const [availableProfessionals, setAvailableProfessionals] = useState<any[]>([]);
+    const [selectedProfessional, setSelectedProfessional] = useState<any>(null);
 
     // Client State
     const [hasCard, setHasCard] = useState<boolean | null>(null);
@@ -61,7 +63,7 @@ export default function BookingPublicPage() {
             const data = await api.publicClientLookup({ xonguileId });
             if (data) {
                 setClientData({ name: data.name, phone: data.phone, email: data.email });
-                setStep(4);
+                setStep(5);
             } else {
                 alert('ID Xonguile não encontrado.');
             }
@@ -76,18 +78,15 @@ export default function BookingPublicPage() {
         setIsBooking(true);
         try {
             const data = {
-                salonId,
-                serviceId: selectedService.id,
-                date: selectedDate,
-                startTime: selectedTime,
                 clientData: {
                     ...clientData,
                     xonguileId: hasCard ? xonguileId : undefined
-                }
+                },
+                professionalId: selectedProfessional?.id
             };
             const res = await api.publicBook(data);
             setResult(res);
-            setStep(5);
+            setStep(6);
         } catch (e: any) {
             alert(e.error || 'Falha ao agendar');
         } finally {
@@ -116,9 +115,9 @@ export default function BookingPublicPage() {
             <main className="flex-1 max-w-2xl mx-auto w-full p-4 pb-20">
 
                 {/* Step Progress */}
-                {step < 5 && (
+                {step < 6 && (
                     <div className="flex gap-2 mb-8">
-                        {[1, 2, 3, 4].map(s => (
+                        {[1, 2, 3, 4, 5].map(s => (
                             <div key={s} className={clsx("h-1.5 flex-1 rounded-full bg-gray-200 overflow-hidden")}>
                                 <div className={clsx("h-full bg-purple-600 transition-all duration-500", s <= step ? 'w-full' : 'w-0')}></div>
                             </div>
@@ -155,40 +154,70 @@ export default function BookingPublicPage() {
 
                 {/* STEP 2: DATE & TIME */}
                 {step === 2 && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                    <div className="space-y-6">
                         <h3 className="text-2xl font-bold text-gray-800">Dia e Hora</h3>
 
-                        <div className="bg-white p-4 rounded-3xl border border-gray-200 shadow-sm">
-                            <label className="text-sm font-bold text-gray-500 mb-2 block">Data</label>
-                            <input
-                                type="date"
-                                min={DateTime.now().toISODate()}
-                                value={selectedDate}
-                                onChange={(e) => setSelectedDate(e.target.value)}
-                                className="w-full bg-gray-50 p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-purple-400 font-bold text-gray-700"
-                            />
-                        </div>
+                        <input
+                            type="date"
+                            min={DateTime.now().toISODate()}
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            className="w-full bg-white p-4 rounded-2xl border border-gray-200 outline-none focus:ring-2 focus:ring-purple-400 font-bold"
+                        />
 
                         <div className="grid grid-cols-3 gap-2">
                             {availableSlots.map(time => (
                                 <button
                                     key={time}
-                                    onClick={() => { setSelectedTime(time); handleNext(); }}
+                                    onClick={async () => {
+                                        setSelectedTime(time);
+                                        // Buscar profissionais livres para este serviço e hora
+                                        const profs = await api.publicGetSlots(salonId!, selectedDate, time);
+                                        setAvailableProfessionals(profs);
+                                        handleNext();
+                                    }}
                                     className={clsx(
                                         "py-4 rounded-2xl font-bold transition-all text-sm",
-                                        selectedTime === time ? 'bg-purple-600 text-white shadow-lg' : 'bg-white text-gray-700 border border-gray-100 hover:border-purple-300'
+                                        selectedTime === time ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 border border-gray-100'
                                     )}
                                 >
                                     {time}
                                 </button>
                             ))}
-                            {availableSlots.length === 0 && <p className="col-span-full py-8 text-center text-gray-400">Nenhum horário disponível para este dia.</p>}
                         </div>
                     </div>
                 )}
 
-                {/* STEP 3: IDENTITY CHOICE */}
+                {/* STEP 2.5 (New Step 3): SELECT PROFESSIONAL */}
                 {step === 3 && (
+                    <div className="space-y-6">
+                        <h3 className="text-2xl font-bold text-gray-800">Escolha o Profissional</h3>
+                        <div className="grid gap-3">
+                            {availableProfessionals.map(p => (
+                                <button
+                                    key={p.id}
+                                    onClick={() => { setSelectedProfessional(p); handleNext(); }}
+                                    className={clsx(
+                                        "p-4 rounded-2xl border flex items-center gap-4 text-left transition-all",
+                                        selectedProfessional?.id === p.id ? 'border-purple-600 bg-purple-50' : 'border-gray-200 bg-white'
+                                    )}
+                                >
+                                    <div className={clsx("w-12 h-12 rounded-full flex items-center justify-center font-bold text-white", p.color)}>
+                                        {p.name[0]}
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-gray-800">{p.name}</p>
+                                        <p className="text-xs text-gray-500">{p.role}</p>
+                                    </div>
+                                </button>
+                            ))}
+                            {availableProfessionals.length === 0 && <p className="text-center py-8 text-gray-400">Nenhum profissional disponível para este horário.</p>}
+                        </div>
+                    </div>
+                )}
+
+                {/* STEP 4: IDENTITY CHOICE (Moved forward due to professional selection) */}
+                {step === 4 && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                         <h3 className="text-2xl font-bold text-gray-800">Agora, quem é você?</h3>
                         <p className="text-gray-500">Para facilitar o seu atendimento, identifique-se abaixo.</p>
@@ -219,8 +248,8 @@ export default function BookingPublicPage() {
                     </div>
                 )}
 
-                {/* STEP 4: FORM / ID INPUT */}
-                {step === 4 && (
+                {/* STEP 5: FORM / ID INPUT */}
+                {step === 5 && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                         {hasCard ? (
                             <div className="space-y-4">
@@ -253,8 +282,8 @@ export default function BookingPublicPage() {
                     </div>
                 )}
 
-                {/* STEP 5: SUCCESS & CARD */}
-                {step === 5 && (
+                {/* STEP 6: SUCCESS */}
+                {step === 6 && (
                     <div className="text-center space-y-8 animate-in zoom-in duration-500">
                         <div>
                             <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-xl">

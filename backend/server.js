@@ -1,9 +1,36 @@
 const express = require('express');
 const cors = require('cors');
+require('dotenv').config();
 const { sequelize, Salon, License, User, Professional, Client, Service, Product, Appointment, Transaction } = require('./database');
 
 const app = express();
 const PORT = 3001;
+const nodemailer = require('nodemailer');
+
+// --- EMAIL CONFIG (PONTO 7) ---
+const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: process.env.EMAIL_PORT || 465,
+    secure: true,
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
+
+const sendEmail = async (to, subject, html) => {
+    if (!process.env.EMAIL_USER) {
+        console.log("⚠️ EMAIL NÃO CONFIGURADO. Logando no console:");
+        console.log(`Para: ${to}\nAssunto: ${subject}\nCorpo: ${html}`);
+        return;
+    }
+    try {
+        await transporter.sendMail({ from: `"Xonguile App" <${process.env.EMAIL_USER}>`, to, subject, html });
+        console.log(`✅ Email enviado para ${to}`);
+    } catch (e) {
+        console.error("❌ Erro ao enviar email:", e);
+    }
+};
 
 app.use(cors());
 app.use(express.json());
@@ -32,13 +59,11 @@ const authenticate = async (req, res, next) => {
         const license = user.Salon?.License;
         if (!license) return res.status(403).json({ error: 'Salão sem licença' });
 
-        // Show trial message if in trial
-        req.isTrial = license.type === 'trial';
+        if (license.status !== 'active') return res.status(403).json({ error: 'Licença suspensa ou expirada. Efetue o pagamento para continuar.' });
 
-        if (license.status !== 'active') return res.status(403).json({ error: 'Licença expirada ou suspensa' });
         if (new Date() > new Date(license.validUntil)) {
             await license.update({ status: 'expired' });
-            return res.status(403).json({ error: 'Licença expirou hoje' });
+            return res.status(403).json({ error: 'Licença expirou. Por favor renovar.' });
         }
     }
 
@@ -91,14 +116,34 @@ app.get('/public/salons/:id', async (req, res) => {
     res.json(salon);
 });
 
-// 4. Get available slots (Simplified: return 08:00 to 18:00 check against existing apps)
+// 4. Get available professionals for a time (PONTO 2)
 app.get('/public/salons/:id/slots', async (req, res) => {
-    const { date } = req.query;
-    const apps = await Appointment.findAll({ where: { SalonId: req.params.id, date } });
-    const busyTimes = apps.map(a => a.startTime);
+    const { date, time } = req.query;
+    const salonId = req.params.id;
+
+    if (time) {
+        // Se passar a hora, devolve profissionais livres
+        const busyProfsIds = (await Appointment.findAll({
+            where: { SalonId: salonId, date, startTime: time, status: { [require('sequelize').Op.ne]: 'cancelled' } }
+        })).map(a => a.ProfessionalId || a.professionalId);
+
+        const availableProfs = await Professional.findAll({
+            where: { SalonId: salonId, active: true, id: { [require('sequelize').Op.notIn]: busyProfsIds.length ? busyProfsIds : [0] } }
+        });
+        return res.json(availableProfs);
+    }
+
+    // Se não passar a hora, devolve apenas as horas que têm pelo menos 1 profissional livre
+    const apps = await Appointment.findAll({ where: { SalonId: salonId, date, status: { [require('sequelize').Op.ne]: 'cancelled' } } });
+    const staffCount = await Professional.count({ where: { SalonId: salonId, active: true } });
 
     const slots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
-    const available = slots.filter(s => !busyTimes.includes(s));
+
+    const available = slots.filter(s => {
+        const busyAtThisTime = apps.filter(a => a.startTime === s).length;
+        return busyAtThisTime < staffCount; // Tem que ter pelo menos um livre
+    });
+
     res.json(available);
 });
 
@@ -169,15 +214,44 @@ app.post('/public/book-appointment', async (req, res) => {
 
             const service = await Service.findByPk(serviceId);
 
+            // PONTO 3: BLOQUEIO DE CONFLITO NO BACKEND
+            const startStr = startTime;
+            const duration = service ? service.duration : 60;
+            const [h, m] = startStr.split(':').map(Number);
+            const endTime = new Date(0, 0, 0, h, m + duration).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+
+            const conflict = await Appointment.findOne({
+                where: {
+                    date,
+                    ProfessionalId: req.body.professionalId,
+                    status: { [require('sequelize').Op.ne]: 'cancelled' },
+                    [require('sequelize').Op.or]: [
+                        { startTime: { [require('sequelize').Op.between]: [startTime, endTime] } },
+                        { endTime: { [require('sequelize').Op.between]: [startTime, endTime] } }
+                    ]
+                }
+            }, { transaction: t });
+
+            if (conflict) throw new Error("Conflito de horário no servidor!");
+
             const app = await Appointment.create({
                 date,
                 startTime,
-                price: service.price,
+                endTime,
+                price: service ? service.price : 0,
                 status: 'scheduled',
                 SalonId: salonId,
                 ClientId: client.id,
-                ServiceId: serviceId
+                ServiceId: serviceId,
+                ProfessionalId: req.body.professionalId
             }, { transaction: t });
+
+            // PONTO 7: DISPARO DE EMAIL REAL
+            await sendEmail(
+                client.email || 'encubadoradesolucoes@gmail.com',
+                'Agendamento Confirmado - Xonguile App',
+                `<h1>Olá, ${client.name}!</h1><p>Teu agendamento para <b>${service.name}</b> foi confirmado para dia ${date} às ${startTime}.</p>`
+            );
 
             return { app, client, isNew };
         });
@@ -209,15 +283,18 @@ app.post('/register-salon', async (req, res) => {
                 phone: phone || ''
             }, { transaction: t });
 
-            // 2. Create 10-Day Free Trial License
+            // PONTO 1: Trial com ACESSO TOTAL
             const validUntil = new Date();
-            validUntil.setDate(validUntil.getDate() + 10); // +10 Days Trial
+            validUntil.setDate(validUntil.getDate() + 14); // 14 Dias de teste
 
             await License.create({
-                key: `TRIAL-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+                key: `TRL-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
                 type: 'trial',
                 status: 'active',
                 validUntil: validUntil,
+                bookingLimit: 999999, // Sem barreiras
+                hasWaitingList: true, // Funcionalidades abertas
+                reportLevel: 3,       // Tudo liberado para testar
                 SalonId: salon.id
             }, { transaction: t });
 
@@ -460,9 +537,29 @@ app.get('/transactions', async (req, res) => {
 });
 app.post('/transactions', async (req, res) => res.json(await Transaction.create(attachSalon(req))));
 
+// --- SUBSCRIPTION & PAYPAL ---
+app.post('/subscription/activate', async (req, res) => {
+    // In prod, verify with PayPal API!
+    const { salonId, type } = req.body;
+    const license = await License.findOne({ where: { SalonId: salonId } });
+    if (license) {
+        const validUntil = new Date();
+        validUntil.setMonth(validUntil.getMonth() + (type.includes('year') ? 12 : 1));
+
+        await license.update({
+            status: 'active',
+            type: type,
+            validUntil: validUntil
+        });
+        res.json({ success: true, message: 'Subscrição ativada com sucesso!' });
+    } else {
+        res.status(404).json({ error: 'Licença não encontrada' });
+    }
+});
+
 // --- SERVER START & BOOTSTRAP ---
 app.listen(PORT, async () => {
-    console.log(`SAAS SERVER RUNNING ON PORT ${PORT}`);
+    console.log(`XONGUILE BUSINESS SERVER RUNNING ON PORT ${PORT}`);
     try {
         await sequelize.sync();
         console.log('Database Synced.');
@@ -482,37 +579,22 @@ app.listen(PORT, async () => {
                 type: 'trial',
                 status: 'active',
                 validUntil: validUntil,
+                bookingLimit: 999999,
+                hasWaitingList: true,
+                reportLevel: 3,
                 SalonId: salon.id
             });
 
-            // Default User
+            // Criar Admin do Sistema (Independente de Salão em termos de permissão)
             await User.create({
                 name: 'Afonsinho Brown',
-                email: 'admin@angiarte.com',
+                email: 'encubadoradesolucoes@gmail.com',
                 password: '123',
-                role: 'admin',
+                role: 'super_level_1', // MASTER
                 SalonId: salon.id
             });
-            console.log("OFFICIAL ADMIN CREATED: admin@angiarte.com / 123");
-        } else {
-            // FIX: Convert any existing lifetime license to 10-day trial starting today
-            const lifetimeLicenses = await License.findAll({ where: { type: 'lifetime' } });
-            if (lifetimeLicenses.length > 0) {
-                console.log(`--- Corrigindo ${lifetimeLicenses.length} licenças vitalícias ---`);
-                const trialUntil = new Date();
-                trialUntil.setDate(trialUntil.getDate() + 10);
-
-                for (const lic of lifetimeLicenses) {
-                    await lic.update({
-                        type: 'trial',
-                        validUntil: trialUntil,
-                        key: `FIX-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
-                    });
-                }
-                console.log('--- Licenças vitalícias corrigidas com sucesso ---');
-            }
+            console.log("XONGUILE MASTER CREATED: encubadoradesolucoes@gmail.com / 123");
         }
-
     } catch (error) {
         console.error('DB Connection Error:', error);
     }

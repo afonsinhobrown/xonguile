@@ -91,10 +91,29 @@ export default function AgendaPage() {
         const endDateTime = startDateTime.plus({ minutes: service.duration });
 
         try {
+            // VERIFICAÇÃO DE CONFLITO (Ponto 3)
+            const hasConflict = appointments.some(app => {
+                if (app.status === 'cancelled') return false;
+                if ((app.ProfessionalId || app.professionalId) !== Number(data.professionalId)) return false;
+
+                // Simplified overlap check for the day
+                const appStart = app.startTime;
+                const appEnd = app.endTime;
+                const newStart = data.time;
+                const newEnd = endDateTime.toFormat('HH:mm');
+
+                return (newStart >= appStart && newStart < appEnd) || (newEnd > appStart && newEnd <= appEnd);
+            });
+
+            if (hasConflict) {
+                alert("CONFLITO! Este profissional já tem um agendamento neste horário.");
+                return;
+            }
+
             await api.addAppointment({
                 clientId: Number(data.clientId),
                 professionalId: Number(data.professionalId),
-                ServiceId: service.id!, // Sequelize association usually expects Capitalized or camelCase foreign key depending on config. Let's send ServiceId just in case, but standard sequelize lowercase 'serviceId' is fine in JSON usually.
+                ServiceId: service.id!,
                 serviceId: service.id!,
                 date: selectedDate.toISODate() || '',
                 startTime: data.time,
@@ -105,7 +124,7 @@ export default function AgendaPage() {
             });
 
             handleCloseModal();
-            loadData(); // Refresh calendar
+            loadData();
         } catch (error) {
             console.error("Failed to schedule:", error);
             alert("Erro ao agendar!");
@@ -148,9 +167,9 @@ export default function AgendaPage() {
                 </div>
             </header>
 
-            {/* Calendar Grid */}
-            <div className="flex-1 overflow-auto bg-gray-50 p-6">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-w-[800px] overflow-hidden">
+            {/* Calendar Grid - SCROLL LATERAL ADICIONADO */}
+            <div className="flex-1 overflow-x-auto overflow-y-auto bg-gray-50 p-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-w-[1200px] overflow-hidden">
 
                     {/* Calendar Header (Staff Columns) */}
                     <div className="grid grid-cols-[80px_1fr] border-b border-gray-200 sticky top-0 bg-white z-20 shadow-sm">

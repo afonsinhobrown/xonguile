@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
-import { useNavigate } from 'react-router-dom';
-import { Scissors, Lock, Mail, Loader2 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Scissors, Lock, Mail, Loader2, Sparkles } from 'lucide-react';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 
@@ -10,6 +10,39 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const token = params.get('token');
+        if (token) {
+            handleTokenLogin(token);
+        }
+    }, []);
+
+    const handleTokenLogin = async (token: string) => {
+        setLoading(true);
+        try {
+            // In MVP, we just find the predefined super admin if token matches
+            if (token === 'XONGUILE-ADMIN-MASTER-TOKEN') {
+                // FORCE SUPER ADMIN DATA
+                const masterUser = {
+                    id: 999,
+                    name: 'Super Admin',
+                    email: 'encubadoradesolucoes@gmail.com',
+                    role: 'super_level_1',
+                    salon: { name: 'Xonguile App Global' }
+                };
+                localStorage.setItem('salao_user', JSON.stringify(masterUser));
+                localStorage.setItem('salon_token', token);
+                navigate('/admin/super');
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -17,7 +50,12 @@ export default function LoginPage() {
         try {
             const user = await api.login({ email, password });
             localStorage.setItem('salao_user', JSON.stringify(user));
-            navigate('/admin'); // Go to Dashboard
+
+            if (user.role?.startsWith('super_')) {
+                navigate('/admin/super');
+            } else {
+                navigate('/admin');
+            }
         } catch (error: any) {
             alert(error.error || 'Falha no login');
         } finally {
@@ -75,17 +113,19 @@ export default function LoginPage() {
                         </Button>
                     </form>
 
-                    <div className="mt-6 text-center text-xs text-gray-400 flex flex-col items-center gap-2">
+                    <div className="mt-6 text-center text-xs text-gray-400 flex flex-col items-center gap-4">
                         <p>Esqueceu a senha? Contate o suporte.</p>
+
+                        {/* BOTÃO DE TOKEN QUE PEDISTE */}
                         <button
-                            onClick={async () => {
-                                await api.adminTokenRequest();
-                                alert('Token enviado via email!');
-                            }}
-                            className="opacity-10 hover:opacity-50 transition-opacity"
+                            type="button"
+                            onClick={() => handleTokenLogin('XONGUILE-ADMIN-MASTER-TOKEN')}
+                            className="bg-gray-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-black transition-all shadow-lg active:scale-95 z-50"
                         >
-                            Admin Token Button
+                            <Sparkles size={18} className="text-yellow-400" />
+                            Acesso Super Admin (Master)
                         </button>
+
                         <p className="mt-2">v2.0 SaaS Enterprise</p>
                     </div>
                 </div>

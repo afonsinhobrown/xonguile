@@ -109,4 +109,9 @@ export const api = {
     publicBook: async (data: any) => fetch(`${API_URL}/public/book-appointment`, {
         method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' }
     }).then(res => res.json()),
+
+    // Subscriptions
+    activateSubscription: async (salonId: number, type: string) => fetch(`${API_URL}/subscription/activate`, {
+        method: 'POST', body: JSON.stringify({ salonId, type }), headers: getHeaders()
+    }).then(res => res.json()),
 };

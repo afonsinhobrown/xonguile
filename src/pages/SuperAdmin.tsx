@@ -121,16 +121,26 @@ export default function SuperAdminPage() {
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <select
-                                                    onChange={(e) => handleUpdateLicense(s.id, { type: e.target.value, status: 'active', validUntil: DateTime.now().plus({ months: 1 }).toJSDate() })}
-                                                    defaultValue=""
-                                                    className="text-xs border-gray-200 rounded-lg"
-                                                >
-                                                    <option value="" disabled>Mudar Plano</option>
-                                                    <option value="standard_month">Standard (Mes)</option>
-                                                    <option value="gold_month">Gold (Mes)</option>
-                                                    <option value="premium_month">Premium (Mes)</option>
-                                                </select>
+                                                <div className="flex justify-end gap-2">
+                                                    <select
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            if (val === 'suspend') {
+                                                                handleUpdateLicense(s.id, { status: 'suspended' });
+                                                            } else {
+                                                                handleUpdateLicense(s.id, { type: val, status: 'active', validUntil: DateTime.now().plus({ months: 1 }).toJSDate() });
+                                                            }
+                                                        }}
+                                                        defaultValue=""
+                                                        className="text-xs border-gray-200 rounded-lg py-1"
+                                                    >
+                                                        <option value="" disabled>Ações</option>
+                                                        <option value="standard_month">Ativar Standard</option>
+                                                        <option value="gold_month">Ativar Gold</option>
+                                                        <option value="premium_month">Ativar Premium</option>
+                                                        <option value="suspend" className="text-red-600 font-bold">SUSPENDER ACESSO</option>
+                                                    </select>
+                                                </div>
                                             </td>
                                         </tr>
                                     );

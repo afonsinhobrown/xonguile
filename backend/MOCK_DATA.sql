@@ -1,20 +1,17 @@
--- SCRIPT DE DADOS MOCK PARA XONGUILE APP (FIXED FOR SUPABASE)
+-- SCRIPT DE DADOS MOCK PARA XONGUILE APP (PRODUÇÃO / REALISTA)
 -- Executar no SQL Editor do Supabase
 
 -- 0. GARANTIR QUE AS COLUNAS NOVAS EXISTAM (MIGRAÇÃO MANUAL)
 DO $$ 
 BEGIN 
-    -- Adicionar xonguileId na tabela Clients se não existir
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='Clients' AND column_name='xonguileId') THEN
         ALTER TABLE "Clients" ADD COLUMN "xonguileId" VARCHAR(255);
     END IF;
 
-    -- Adicionar parentId na tabela Users se não existir
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='Users' AND column_name='parentId') THEN
         ALTER TABLE "Users" ADD COLUMN "parentId" INTEGER;
     END IF;
 
-    -- Adicionar colunas de licença se não existirem
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='Licenses' AND column_name='bookingLimit') THEN
         ALTER TABLE "Licenses" ADD COLUMN "bookingLimit" INTEGER DEFAULT 50;
         ALTER TABLE "Licenses" ADD COLUMN "hasWaitingList" BOOLEAN DEFAULT FALSE;
@@ -31,49 +28,65 @@ DECLARE
     prof_id INT;
     client_id INT;
     serv_id INT;
+    
+    -- Serviços de Cabelo
+    hair_services TEXT[] := ARRAY['Corte Feminino Moderno', 'Corte Masculino Fade', 'Coloração Global', 'Mechas Criativas', 'Hidratação Intensiva Caviar', 'Escova Progressiva Orgânica', 'Spa Capilar Anti-Stress', 'Penteado Noiva/Gala'];
+    hair_prices INT[] := ARRAY[800, 500, 2500, 4500, 1200, 3500, 1500, 2500];
+    
+    -- Unhas
+    nail_services TEXT[] := ARRAY['Manicure & Pedicure Simples', 'Alongamento Gel Moldado', 'Unha de Fibra de Vidro', 'Spa do Pé Profundo'];
+    nail_prices INT[] := ARRAY[600, 2500, 3000, 1200];
+    
+    -- Estética
+    beauty_services TEXT[] := ARRAY['Design de Sobrancelhas', 'Extensão de Cílios Fio a Fio', 'Limpeza de Pele Profunda', 'Massagem Relaxante (1h)', 'Drenagem Linfática Corporal', 'Maquiagem Social Premium'];
+    beauty_prices INT[] := ARRAY[500, 2000, 2500, 1800, 2200, 2000];
+
+    all_services TEXT[];
+    all_prices INT[];
 BEGIN
+    all_services := hair_services || nail_services || beauty_services;
+    all_prices := hair_prices || nail_prices || beauty_prices;
+
     FOREACH s_id IN ARRAY salon_ids LOOP
-        -- Verificar se o salão existe antes de inserir
         IF EXISTS (SELECT 1 FROM "Salons" WHERE id = s_id) THEN
             
-            -- 1. Inserir 5 Profissionais por Salão
-            FOR i IN 1..5 LOOP
-                INSERT INTO "Professionals" (name, role, color, active, "createdAt", "updatedAt", "SalonId")
-                VALUES ('TESTE Profissional ' || i, 'Cabelereiro', '#9333ea', true, NOW(), NOW(), s_id);
-            END LOOP;
+            -- 1. Inserir Profissionais com Nomes Reais
+            INSERT INTO "Professionals" (name, role, color, active, "createdAt", "updatedAt", "SalonId") VALUES 
+            ('Neuza Santos', 'Cabelereira Senior', '#9333ea', true, NOW(), NOW(), s_id),
+            ('Dário Mendes', 'Barbeiro Master', '#2563eb', true, NOW(), NOW(), s_id),
+            ('Sheila Tembe', 'Manicure & Nail Art', '#db2777', true, NOW(), NOW(), s_id),
+            ('Carla Muianga', 'Esteticista', '#059669', true, NOW(), NOW(), s_id);
 
-            -- 2. Inserir 5 Clientes por Salão
-            FOR i IN 1..5 LOOP
-                INSERT INTO "Clients" (name, phone, email, "xonguileId", "createdAt", "updatedAt", "SalonId")
-                VALUES ('TESTE Cliente ' || i, '84123456' || i, 'teste' || i || '@cliente.com', 'XON-T' || s_id || i, NOW(), NOW(), s_id);
-            END LOOP;
+            -- 2. Inserir Clientes Reais
+            INSERT INTO "Clients" (name, phone, email, "xonguileId", "createdAt", "updatedAt", "SalonId") VALUES 
+            ('Maria Chirindza', '840000001', 'maria@email.com', 'XON-M1', NOW(), NOW(), s_id),
+            ('José Macuácua', '840000002', 'jose@email.com', 'XON-J2', NOW(), NOW(), s_id),
+            ('Anabela Langa', '840000003', 'anabela@email.com', 'XON-A3', NOW(), NOW(), s_id);
 
-            -- 3. Inserir 5 Serviços por Salão
-            FOR i IN 1..5 LOOP
+            -- 3. Inserir Serviços Reais da Lista
+            FOR i IN 1..cardinality(all_services) LOOP
                 INSERT INTO "Services" (name, price, duration, active, "createdAt", "updatedAt", "SalonId")
-                VALUES ('TESTE Serviço ' || i, 500 + (i * 100), 30 + (i * 15), true, NOW(), NOW(), s_id);
+                VALUES (all_services[i], all_prices[i], 45, true, NOW(), NOW(), s_id);
             END LOOP;
 
-            -- 4. Inserir 5 Produtos por Salão
-            FOR i IN 1..5 LOOP
-                INSERT INTO "Products" (name, price, cost, quantity, "minQuantity", category, "createdAt", "updatedAt", "SalonId")
-                VALUES ('TESTE Produto ' || i, 1200 + (i * 100), 800, 20, 5, 'resale', NOW(), NOW(), s_id);
-            END LOOP;
+            -- 4. Inserir Produtos de Elite
+            INSERT INTO "Products" (name, price, cost, quantity, "minQuantity", category, "createdAt", "updatedAt", "SalonId") VALUES 
+            ('Shampoo Reparador 500ml', 1200, 700, 15, 3, 'resale', NOW(), NOW(), s_id),
+            ('Óleo de Argan Premium', 1800, 1100, 10, 2, 'resale', NOW(), NOW(), s_id),
+            ('Kit Manutenção Pós-Química', 3500, 2200, 5, 1, 'resale', NOW(), NOW(), s_id);
 
-            -- 5. Inserir 5 Transações por Salão
-            FOR i IN 1..5 LOOP
-                INSERT INTO "Transactions" (description, amount, type, category, "paymentMethod", date, "createdAt", "updatedAt", "SalonId")
-                VALUES ('TESTE Venda de Produto ' || i, 1500, 'income', 'Produtos', 'cash', NOW(), NOW(), NOW(), s_id);
-            END LOOP;
+            -- 5. Inserir Transações Recentes
+            INSERT INTO "Transactions" (description, amount, type, category, "paymentMethod", date, "createdAt", "updatedAt", "SalonId")
+            VALUES ('Subscrição Mensal Ouro', 2500, 'expense', 'Licenciamento', 'paypal', NOW(), NOW(), NOW(), s_id);
 
-            -- 6. Inserir 5 Agendamentos por Salão
+            -- 6. Inserir Agendamentos de Demonstração
             SELECT id INTO prof_id FROM "Professionals" WHERE "SalonId" = s_id LIMIT 1;
             SELECT id INTO client_id FROM "Clients" WHERE "SalonId" = s_id LIMIT 1;
             SELECT id INTO serv_id FROM "Services" WHERE "SalonId" = s_id LIMIT 1;
 
-            FOR i IN 1..5 LOOP
+            FOR i IN 1..3 LOOP
                 INSERT INTO "Appointments" (date, "startTime", "endTime", status, price, "createdAt", "updatedAt", "SalonId", "ProfessionalId", "ClientId", "ServiceId")
-                VALUES (TO_CHAR(NOW() + (i || ' days')::interval, 'YYYY-MM-DD'), '08:00', '09:00', 'scheduled', 500, NOW(), NOW(), s_id, prof_id, client_id, serv_id);
+                VALUES (TO_CHAR(NOW() + (i || ' days')::interval, 'YYYY-MM-DD'), '09:00', '10:00', 'scheduled', 1500, NOW(), NOW(), s_id, prof_id, client_id, serv_id);
             END LOOP;
         END IF;
 
