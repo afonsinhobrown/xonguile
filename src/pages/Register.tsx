@@ -8,9 +8,9 @@ import { clsx } from 'clsx';
 
 export default function RegisterPage() {
     const [loading, setLoading] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState<'trial' | 'standard' | 'gold' | 'premium'>('trial');
     const navigate = useNavigate();
 
-    // Simple form state
     const [formData, setFormData] = useState({
         salonName: '',
         phone: '',
@@ -27,9 +27,13 @@ export default function RegisterPage() {
         e.preventDefault();
         setLoading(true);
         try {
-            await api.registerSalon(formData);
+            await api.registerSalon({ ...formData, plan: selectedPlan });
 
-            alert('Conta criada com sucesso! Faça login para começar seu Teste Grátis de 10 dias.');
+            if (selectedPlan === 'trial') {
+                alert('Conta criada com sucesso! Aproveite os 10 dias de teste.');
+            } else {
+                alert(`Conta criada! Agora, faça login e ative seu plano ${selectedPlan} em Configurações > Planos.`);
+            }
             navigate('/login');
         } catch (error: any) {
             alert(error.error || 'Falha no cadastro');
@@ -39,86 +43,65 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-900 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col md:flex-row">
+        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+            <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col md:flex-row">
 
-                {/* Left Side (Banner) - Hidden on mobile, visible on desktop could be nice but let's keep simple vertical for now */}
+                {/* Info Panel */}
+                <div className="hidden md:flex w-1/3 bg-purple-600 p-12 text-white flex-col justify-between">
+                    <div>
+                        <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mb-8 backdrop-blur-md">
+                            <Scissors size={24} />
+                        </div>
+                        <h2 className="text-3xl font-black leading-tight mb-4 tracking-tight">O futuro do seu salão começa aqui.</h2>
+                        <p className="text-purple-100 opacity-80">Gestão simplificada, clientes mais felizes e lucros maiores.</p>
+                    </div>
+                    <div className="space-y-4">
+                        <FeatureItem text="Agendamento Inteligente" />
+                        <FeatureItem text="Faturação e PDV" />
+                        <FeatureItem text="Relatórios Financeiros" />
+                    </div>
+                </div>
 
-                <div className="w-full p-8">
-                    <div className="text-center mb-6">
-                        <h1 className="text-2xl font-bold text-gray-800">Crie sua Conta Grátis</h1>
-                        <p className="text-gray-500 text-sm mt-1">Teste o Xonguile App Premium por 10 dias</p>
+                {/* Form Panel */}
+                <div className="flex-1 p-8 md:p-12">
+                    <div className="mb-8">
+                        <h1 className="text-2xl font-black text-gray-900 tracking-tight">Crie sua Conta Master</h1>
+                        <p className="text-gray-500 mt-1">Preencha os dados do seu negócio.</p>
                     </div>
 
                     <form onSubmit={handleRegister} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <Input
-                                label="Nome do Salão"
-                                name="salonName"
-                                placeholder="Ex: Salão Beleza Pura"
-                                required
-                                value={formData.salonName}
-                                onChange={handleChange}
-                            // icon={<Store size={16} />}
-                            />
-                            <Input
-                                label="Telefone do Salão"
-                                name="phone"
-                                placeholder="84 123 4567"
-                                required
-                                value={formData.phone}
-                                onChange={handleChange}
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input label="Nome do Salão" name="salonName" placeholder="Ex: Studio VIP" required value={formData.salonName} onChange={handleChange} />
+                            <Input label="Telefone" name="phone" placeholder="84 000 0000" required value={formData.phone} onChange={handleChange} />
                         </div>
 
-                        <Input
-                            label="Seu Nome (Admin)"
-                            name="adminName"
-                            placeholder="Nome do Dono/Gerente"
-                            required
-                            value={formData.adminName}
-                            onChange={handleChange}
-                        />
+                        <Input label="Seu Nome (Admin)" name="adminName" placeholder="Nome Completo" required value={formData.adminName} onChange={handleChange} />
 
-                        <Input
-                            label="Email Profissional"
-                            name="adminEmail"
-                            type="email"
-                            placeholder="teu@email.com"
-                            required
-                            value={formData.adminEmail}
-                            onChange={handleChange}
-                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input label="Email de Acesso" name="adminEmail" type="email" placeholder="admin@email.com" required value={formData.adminEmail} onChange={handleChange} />
+                            <Input label="Senha" name="adminPassword" type="password" placeholder="••••••••" required value={formData.adminPassword} onChange={handleChange} />
+                        </div>
 
-                        <Input
-                            label="Senha de Acesso"
-                            name="adminPassword"
-                            type="password"
-                            placeholder="Crie uma senha forte"
-                            required
-                            value={formData.adminPassword}
-                            onChange={handleChange}
-                        />
+                        {/* PLAN SELECTOR */}
+                        <div className="pt-4 border-t border-gray-100">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest block mb-3">Escolha seu Plano Inicial</label>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                <PlanBtn active={selectedPlan === 'trial'} onClick={() => setSelectedPlan('trial')} name="Trial" sub="10 Dias" />
+                                <PlanBtn active={selectedPlan === 'standard'} onClick={() => setSelectedPlan('standard')} name="Standard" sub="MZN 1.800" />
+                                <PlanBtn active={selectedPlan === 'gold'} onClick={() => setSelectedPlan('gold')} name="Gold" sub="MZN 2.500" />
+                                <PlanBtn active={selectedPlan === 'premium'} onClick={() => setSelectedPlan('premium')} name="Premium" sub="MZN 3.000" />
+                            </div>
+                        </div>
 
-                        <div className="pt-2">
-                            <Button className="w-full py-4 text-lg font-bold shadow-purple-600/20" disabled={loading}>
-                                {loading ? <Loader2 className="animate-spin" /> : 'Criar Conta e Começar Teste Grátis'}
+                        <div className="pt-6">
+                            <Button className="w-full py-4 text-lg font-black shadow-lg shadow-purple-600/20" disabled={loading}>
+                                {loading ? <Loader2 className="animate-spin" /> : 'Criar Conta e Começar'}
                             </Button>
                         </div>
                     </form>
 
-                    <div className="mt-8 border-t border-gray-100 pt-6">
-                        <p className="text-center text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Planos após o teste grátis</p>
-                        <div className="grid grid-cols-3 gap-2">
-                            <PlanSmall name="Standard" price="1.800" />
-                            <PlanSmall name="Gold" price="2.500" highlight />
-                            <PlanSmall name="Premium" price="3.000" />
-                        </div>
-                    </div>
-
-                    <div className="mt-6 text-center text-sm">
-                        <p className="text-gray-500">Já tem uma conta?</p>
-                        <Link to="/login" className="text-purple-600 font-bold hover:underline">Fazer Login</Link>
+                    <div className="mt-8 text-center text-sm">
+                        <p className="text-gray-500">Já tem uma conta? <Link to="/login" className="text-purple-600 font-bold hover:underline">Fazer Login</Link></p>
                     </div>
                 </div>
             </div>
@@ -126,15 +109,27 @@ export default function RegisterPage() {
     );
 }
 
-function PlanSmall({ name, price, highlight }: any) {
+function FeatureItem({ text }: { text: string }) {
     return (
-        <div className={clsx(
-            "p-3 rounded-xl border text-center transition-all",
-            highlight ? "border-purple-200 bg-purple-50" : "border-gray-100"
-        )}>
-            <p className="text-[10px] font-bold text-gray-400 uppercase">{name}</p>
-            <p className={clsx("text-sm font-black", highlight ? "text-purple-600" : "text-gray-800")}>{price}</p>
-            <p className="text-[8px] text-gray-400 italic">MT/mês</p>
+        <div className="flex items-center gap-2">
+            <CheckCircle size={18} className="text-purple-200" />
+            <span className="font-bold text-sm">{text}</span>
         </div>
+    );
+}
+
+function PlanBtn({ active, onClick, name, sub }: any) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={clsx(
+                "p-3 rounded-2xl border-2 text-left transition-all",
+                active ? "border-purple-600 bg-purple-50" : "border-gray-100 hover:border-gray-200"
+            )}
+        >
+            <p className={clsx("text-xs font-black", active ? "text-purple-600" : "text-gray-800")}>{name}</p>
+            <p className="text-[10px] text-gray-400 font-bold">{sub}</p>
+        </button>
     );
 }

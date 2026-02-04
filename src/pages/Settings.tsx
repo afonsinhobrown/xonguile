@@ -411,15 +411,23 @@ function PlanCard({ name, price, annual, features, color, highlight, btnClass, a
                 </ul>
             </div>
             <div className="space-y-4">
-                <button
-                    className={clsx("w-full py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2", btnClass, (active || checkingOut) && "cursor-default opacity-80")}
-                    disabled={active || checkingOut}
-                    onClick={() => handlePayPal('month')}
-                >
-                    {checkingOut ? <Loader2 className="animate-spin" /> : active ? 'Plano Atual Ativo' : 'Ativar PayPal (Mensal)'}
-                </button>
                 {!active && (
-                    <div id={`paypal-button-container-${name}`} className="mt-2 min-h-[40px] z-50"></div>
+                    <div className="space-y-3">
+                        <button
+                            className={clsx("w-full py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2", btnClass, checkingOut && "cursor-default opacity-80")}
+                            disabled={checkingOut}
+                            onClick={() => handlePayPal('month')}
+                        >
+                            {checkingOut ? <Loader2 className="animate-spin" /> : 'Pagar via PayPal (Mensal)'}
+                        </button>
+
+                        <div id={`paypal-button-container-${name}`} className="mt-2 min-h-[40px] z-50"></div>
+                    </div>
+                )}
+                {active && (
+                    <div className="w-full py-4 rounded-2xl bg-emerald-50 text-emerald-700 font-bold flex items-center justify-center gap-2 border border-emerald-100">
+                        <CheckCircle size={20} /> Plano Atual Ativo
+                    </div>
                 )}
             </div>
         </div>

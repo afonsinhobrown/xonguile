@@ -227,7 +227,7 @@ export default function SuperAdminPage() {
                                                 <div className="w-3 h-3 bg-emerald-500 rounded-full" />
                                                 <span className="text-xs font-bold uppercase tracking-widest">PayPal</span>
                                             </div>
-                                            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-200 grayscale">
+                                            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 grayscale">
                                                 <div className="w-3 h-3 bg-gray-300 rounded-full" />
                                                 <span className="text-xs font-bold uppercase tracking-widest text-gray-400">M-Pesa</span>
                                             </div>
@@ -268,8 +268,5 @@ function StatCard({ icon, label, value }: any) {
                 <p className="text-xl font-black text-gray-900 tracking-tight">{value}</p>
             </div>
         </div>
-    );
-}
-        </div >
     );
 }

@@ -1,24 +1,14 @@
-import {
-    Calendar as CalendarIcon,
-    LayoutDashboard,
-    Users,
-    Scissors,
-    Package,
-    Settings,
-    LogOut,
-    Sparkles,
-    Banknote,
-    ShoppingCart,
-    Menu,
-    Clock,
-    Shield
-} from 'lucide-react';
-import { NavLink, Outlet, Link } from 'react-router-dom';
-import { clsx } from 'clsx';
-import { useState } from 'react';
-
 export function MainLayout() {
-    const user = JSON.parse(localStorage.getItem('salao_user') || '{}');
+    // SECURITY HELPER: Fetch user data reliably
+    const getUserData = () => {
+        try {
+            return JSON.parse(localStorage.getItem('salao_user') || '{}');
+        } catch (e) {
+            return {};
+        }
+    };
+
+    const user = getUserData();
     const license = user?.salon?.License || user?.salon?.license || {};
     const isSuper = user.role?.startsWith('super_');
     const isTrial = license.type === 'trial';
@@ -43,7 +33,7 @@ export function MainLayout() {
                     {/* License Badge */}
                     {!isSuper && (
                         <div className="pl-11 mt-1">
-                            <LicenseBadge />
+                            <LicenseBadge user={user} />
                         </div>
                     )}
                 </div>
@@ -90,121 +80,81 @@ export function MainLayout() {
                 </div>
             </aside>
 
-            {/* --- Mobile Header (Visible on Mobile) --- */}
-            <header className="md:hidden h-14 bg-white border-b border-gray-200 flex items-center justify-center px-4 shrink-0 shadow-sm relative z-20">
+            {/* --- Mobile Header --- */}
+            <header className="md:hidden h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 shrink-0 shadow-sm relative z-20">
                 <div className="flex items-center gap-2">
                     <div className="w-6 h-6 bg-purple-600 rounded-md flex items-center justify-center text-white font-bold text-sm">X</div>
                     <span className="font-bold text-lg text-gray-800">Xonguile<span className="text-purple-600">App</span></span>
                 </div>
+                {!isSuper && <LicenseBadge user={user} />}
             </header>
 
-            {/* --- Main Content Area --- */}
+            {/* --- Main Area --- */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-gray-50 relative pb-16 md:pb-0">
-
-                {/* Trial & Upgrade Banners (Restored for Onboarding) */}
                 {!isSuper && isTrial && (
                     <div className="bg-gradient-to-r from-orange-600 to-amber-600 text-white px-4 py-3 text-center text-xs font-bold shadow-lg flex items-center justify-center gap-3 animate-pulse">
                         <Sparkles size={16} className="text-yellow-300" />
-                        VOCÊ ESTÁ EM MODO DE TESTE. TODOS OS DADOS SÃO FICTÍCIOS E SERÃO APAGADOS.
-                        <Link to="/admin/configuracoes" className="bg-white text-orange-600 px-3 py-1 rounded-full hover:bg-orange-50 transition-colors ml-2">ASSINAR PLANO AGORA</Link>
+                        VOCÊ ESTÁ EM MODO DE TESTE. SEU ACESSO É TEMPORÁRIO.
+                        <Link to="/admin/configuracoes" className="bg-white text-orange-600 px-3 py-1 rounded-full hover:bg-orange-50 transition-colors ml-2">ASSINAR AGORA</Link>
                     </div>
                 )}
-
-                {!isSuper && !isTrial && isStandardOrGold && (
-                    <div className="bg-purple-600 text-white px-4 py-1.5 text-center text-[10px] font-bold tracking-wide uppercase flex items-center justify-center gap-2">
-                        <Sparkles size={12} />
-                        FAÇA UPGRADE DO PLANO PARA MELHOR EXPERIÊNCIA
-                        <Link to="/admin/configuracoes" className="bg-white text-purple-600 px-2 py-0.5 rounded ml-2 hover:bg-purple-50">UPGRADE</Link>
-                    </div>
-                )}
-
                 <Outlet />
             </main>
 
-            {/* --- Mobile Bottom Nav (Visible on Mobile) --- */}
+            {/* --- Mobile Footer --- */}
             <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center h-16 px-2 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <MobileNavItem to="/admin" icon={<LayoutDashboard size={20} />} label="Início" />
                 <MobileNavItem to="/admin/agenda" icon={<CalendarIcon size={20} />} label="Agenda" />
-
-                {/* Highlighted POS Button */}
                 <NavLink to="/admin/caixa" className="flex flex-col items-center justify-center -mt-8">
                     <div className="w-14 h-14 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-lg shadow-purple-600/30 border-4 border-gray-50">
                         <ShoppingCart size={24} />
                     </div>
                     <span className="text-[10px] font-medium text-gray-600 mt-1">Caixa</span>
                 </NavLink>
-
-                <MobileNavItem to="/admin/financeiro" icon={<Banknote size={20} />} label="Financeiro" />
-                <MobileNavItem to="/admin/configuracoes" icon={<Menu size={20} />} label="Menu" />
+                <MobileNavItem to="/admin/financeiro" icon={<Banknote size={20} />} label="Finanças" />
+                <MobileNavItem to={isSuper ? "/admin/super" : "/admin/configuracoes"} icon={<Menu size={20} />} label="Mais" />
             </nav>
-
         </div>
     );
 }
 
 function NavItem({ to, icon, label }: { to: string, icon: React.ReactNode, label: string }) {
     return (
-        <NavLink
-            to={to}
-            className={({ isActive }) => clsx(
-                "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-all text-sm font-medium group",
-                isActive
-                    ? "bg-purple-50 text-purple-700"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-            )}
-        >
-            <span className="group-[.active]:text-purple-600 text-gray-400 group-hover:text-gray-600 transition-colors">
-                {icon}
-            </span>
+        <NavLink to={to} className={({ isActive }) => clsx(
+            "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-all text-sm font-medium group",
+            isActive ? "bg-purple-50 text-purple-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+        )}>
+            <span className="group-[.active]:text-purple-600 text-gray-400 group-hover:text-gray-600 transition-colors">{icon}</span>
             <span>{label}</span>
         </NavLink>
     );
 }
 
-
 function MobileNavItem({ to, icon, label }: { to: string, icon: React.ReactNode, label: string }) {
     return (
-        <NavLink
-            to={to}
-            className={({ isActive }) => clsx(
-                "flex flex-col items-center justify-center w-full h-full gap-1",
-                isActive ? "text-purple-600" : "text-gray-400"
-            )}
-        >
+        <NavLink to={to} className={({ isActive }) => clsx(
+            "flex flex-col items-center justify-center w-full h-full gap-1",
+            isActive ? "text-purple-600" : "text-gray-400"
+        )}>
             {icon}
             <span className="text-[10px] font-medium">{label}</span>
         </NavLink>
-    )
+    );
 }
 
-function LicenseBadge() {
-    const userData = JSON.parse(localStorage.getItem('salao_user') || '{}');
-    const license = userData?.salon?.License || userData?.salon?.license;
-
+function LicenseBadge({ user }: any) {
+    const license = user?.salon?.License || user?.salon?.license;
     if (!license) return null;
 
-    const isTrial = license.type === 'trial';
-    const isPremium = license.type?.includes('premium');
-    const isGold = license.type?.includes('gold');
-    const isStandard = license.type?.includes('standard');
-
-    const validDate = license.validUntil ? new Date(license.validUntil) : new Date();
-    const daysLeft = Math.ceil((validDate.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
-
-    let label = 'Trial';
-    if (isStandard) label = 'Standard';
-    if (isGold) label = 'Gold';
-    if (isPremium) label = 'Premium';
+    const daysLeft = Math.ceil((new Date(license.validUntil).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+    const label = license.type?.includes('trial') ? 'Teste' : license.type?.split('_')[0].toUpperCase();
 
     return (
         <div className={clsx(
-            "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
-            isTrial ? "bg-orange-600 text-white border border-orange-700" :
-                isPremium ? "bg-purple-100 text-purple-700 border border-purple-200" :
-                    isGold ? "bg-amber-100 text-amber-700 border border-amber-200" :
-                        "bg-blue-100 text-blue-700 border border-blue-200"
+            "px-2 py-0.5 rounded text-[9px] font-black tracking-tighter uppercase",
+            license.type === 'trial' ? "bg-orange-600 text-white" : "bg-emerald-100 text-emerald-700 border border-emerald-200"
         )}>
-            {label} • {daysLeft > 0 ? daysLeft : 0}d
+            {label} • {daysLeft > 0 ? daysLeft : 0}D
         </div>
     );
 }
