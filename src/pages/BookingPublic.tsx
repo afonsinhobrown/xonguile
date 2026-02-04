@@ -165,22 +165,30 @@ export default function BookingPublicPage() {
         if (!selectedService || !selectedDate || !selectedTime) return alert('Por favor, selecione todos os dados.');
         setIsBooking(true);
         try {
+            // Sanitize payload to avoid undefined fields which can trigger 400
+            const finalClientData: any = {
+                name: clientData.name,
+                phone: clientData.phone,
+                email: clientData.email || ''
+            };
+            if (hasCard || idVerified) {
+                finalClientData.xonguileId = xonguileId;
+            }
+
             const data = {
                 salonId: parseInt(salonId!),
                 serviceId: selectedService.id,
                 date: selectedDate,
                 time: selectedTime,
                 professionalId: selectedProfessional?.id,
-                clientData: {
-                    ...clientData,
-                    xonguileId: (hasCard || idVerified) ? xonguileId : undefined
-                }
+                clientData: finalClientData
             };
             const res = await api.publicBook(data);
             setResult(res);
             setStep(6);
         } catch (e: any) {
-            alert(e.error || 'Falha ao agendar. Verifique os dados e tente novamente.');
+            console.error('Erro no agendamento:', e);
+            alert(e.error || 'Falha ao agendar. Verifique se todos os campos estão preenchidos corretamente.');
         } finally {
             setIsBooking(false);
         }
@@ -468,21 +476,21 @@ export default function BookingPublicPage() {
                             <p className="text-gray-500 text-lg">Seu lugar está garantido no {salon?.name}.</p>
                         </div>
 
-                        {/* PREMIUM RECEIPT CARD */}
-                        <div ref={ticketRef} className="receipt-card bg-white rounded-[3rem] border border-gray-100 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] relative overflow-hidden text-left p-0 mx-auto max-w-md">
+                        {/* PREMIUM RECEIPT CARD - Using strictly HEX/RGB for html2canvas compatibility (oklch fix) */}
+                        <div ref={ticketRef} className="receipt-card bg-white rounded-[3rem] border border-gray-100 relative overflow-hidden text-left p-0 mx-auto max-w-md" style={{ boxShadow: '0 32px 64px -16px rgba(0,0,0,0.1)' }}>
                             <div className="absolute top-0 right-0 p-8 no-print">
-                                <div className="text-[10px] font-black text-purple-200 uppercase tracking-[0.2em] rotate-90 origin-right translate-x-4">#INCUBADORADESOLUÇÕES</div>
+                                <div className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em] rotate-90 origin-right translate-x-4">#INCUBADORADESOLUÇÕES</div>
                             </div>
 
                             {/* Receipt Header */}
-                            <div className="bg-gray-900 p-8 text-white flex justify-between items-center">
+                            <div className="p-8 text-white flex justify-between items-center" style={{ backgroundColor: '#111827' }}>
                                 <div>
-                                    <h4 className="text-2xl font-black tracking-tighter">Xonguile<span className="text-purple-400">App</span></h4>
+                                    <h4 className="text-2xl font-black tracking-tighter">Xonguile<span style={{ color: '#a855f7' }}>App</span></h4>
                                     <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">Recibo de Agendamento Online</p>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-[10px] text-gray-400 font-bold uppercase">ID Reserva</p>
-                                    <p className="text-lg font-mono font-black text-purple-400">XON-{result?.id?.toString().padStart(4, '0') || '0021'}</p>
+                                    <p className="text-lg font-mono font-black" style={{ color: '#a855f7' }}>XON-{result?.id?.toString().padStart(4, '0') || '0021'}</p>
                                 </div>
                             </div>
 
@@ -491,11 +499,11 @@ export default function BookingPublicPage() {
                                 <div className="flex justify-between items-end border-b border-gray-100 pb-6">
                                     <div>
                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Estabelecimento</p>
-                                        <h5 className="text-2xl font-bold text-gray-800">{salon?.name}</h5>
+                                        <h5 className="text-2xl font-bold text-gray-900">{salon?.name}</h5>
                                         <p className="text-xs text-gray-500">{salon?.address || 'Moçambique'}</p>
                                     </div>
                                     <div className="text-right pb-1">
-                                        <div className="text-[10px] font-black text-purple-600 uppercase tracking-widest">#INCUBADORADESOLUÇÕES</div>
+                                        <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#9333ea' }}>#INCUBADORADESOLUÇÕES</div>
                                     </div>
                                 </div>
 
@@ -503,36 +511,36 @@ export default function BookingPublicPage() {
                                 <div className="grid grid-cols-2 gap-8">
                                     <div>
                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Serviço Selecionado</p>
-                                        <p className="text-lg font-bold text-gray-800 leading-tight">{selectedService?.name}</p>
-                                        <p className="text-xs text-purple-600 font-black mt-1">MZN {selectedService?.price}</p>
+                                        <p className="text-lg font-bold text-gray-900 leading-tight">{selectedService?.name}</p>
+                                        <p className="text-xs font-black mt-1" style={{ color: '#9333ea' }}>MZN {selectedService?.price}</p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Data e Horário</p>
-                                        <p className="text-lg font-bold text-gray-800">{DateTime.fromISO(selectedDate).toFormat('dd LLL yyyy')}</p>
-                                        <p className="text-lg font-black text-gray-900">{selectedTime}</p>
+                                        <p className="text-lg font-bold text-gray-900">{DateTime.fromISO(selectedDate).toFormat('dd LLL yyyy')}</p>
+                                        <p className="text-lg font-black text-gray-950">{selectedTime}</p>
                                     </div>
                                     <div>
                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Profissional</p>
-                                        <p className="text-lg font-bold text-gray-800 leading-tight">{selectedProfessional?.name || 'Qualquer disponível'}</p>
+                                        <p className="text-lg font-bold text-gray-900 leading-tight">{selectedProfessional?.name || 'Qualquer disponível'}</p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Duração Est.</p>
-                                        <p className="text-lg font-bold text-gray-800">{selectedService?.duration} min</p>
+                                        <p className="text-lg font-bold text-gray-900">{selectedService?.duration} min</p>
                                     </div>
                                 </div>
 
                                 {/* Client Section / Card */}
                                 <div className="pt-8 border-t border-dashed border-gray-200">
-                                    <div className="bg-gray-50 p-6 rounded-3xl flex justify-between items-center group hover:bg-purple-50 transition-all">
+                                    <div className="p-6 rounded-3xl flex justify-between items-center group transition-all" style={{ backgroundColor: '#f9fafb' }}>
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <p className="text-[10px] text-gray-400 font-bold uppercase">Cliente / Xonguile ID</p>
-                                                <span className="px-2 py-0.5 bg-purple-600 text-[8px] text-white font-black rounded-full">GLOBAL</span>
+                                                <span className="px-2 py-0.5 text-[8px] text-white font-black rounded-full" style={{ backgroundColor: '#9333ea' }}>GLOBAL</span>
                                             </div>
                                             <p className="text-xl font-black text-gray-900 leading-tight">{clientData.name.toUpperCase()}</p>
-                                            <p className="font-mono font-bold text-purple-700 tracking-tighter">{result?.client?.xonguileId || xonguileId || 'XON-N5UZ2F'}</p>
+                                            <p className="font-mono font-bold tracking-tighter" style={{ color: '#7e22ce' }}>{result?.client?.xonguileId || xonguileId || 'XON-N5UZ2F'}</p>
                                             <div className="mt-4">
-                                                <p className="text-[9px] font-black text-purple-400 tracking-[0.2em] uppercase">#INCUBADORADESOLUÇÕES</p>
+                                                <p className="text-[9px] font-black tracking-[0.2em] uppercase" style={{ color: '#c084fc' }}>#INCUBADORADESOLUÇÕES</p>
                                             </div>
                                         </div>
                                         <div className="bg-white p-3 border border-gray-50 rounded-2xl shadow-xl">
@@ -547,16 +555,16 @@ export default function BookingPublicPage() {
 
                                 <div className="pt-8 text-center space-y-2">
                                     <p className="text-[9px] text-gray-400 font-medium">Apresente este código no salão para identificação rápida.</p>
-                                    <div className="flex items-center justify-center gap-2 border-t border-gray-50 pt-4">
+                                    <div className="flex items-center justify-center gap-2 border-t border-gray-100 pt-4">
                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Powered by</p>
-                                        <span className="text-xs font-black text-purple-600 tracking-tighter">XonguileApp</span>
+                                        <span className="text-xs font-black tracking-tighter" style={{ color: '#9333ea' }}>XonguileApp</span>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Ticket Notch Effect */}
-                            <div className="absolute left-0 top-[35%] -translate-x-1/2 w-8 h-8 bg-gray-50 rounded-full border border-gray-100"></div>
-                            <div className="absolute right-0 top-[35%] translate-x-1/2 w-8 h-8 bg-gray-50 rounded-full border border-gray-100"></div>
+                            <div className="absolute left-0 top-[35%] -translate-x-1/2 w-8 h-8 rounded-full border border-gray-100" style={{ backgroundColor: '#f9fafb' }}></div>
+                            <div className="absolute right-0 top-[35%] translate-x-1/2 w-8 h-8 rounded-full border border-gray-100" style={{ backgroundColor: '#f9fafb' }}></div>
                         </div>
 
                         <div className="space-y-4 no-print px-6">
