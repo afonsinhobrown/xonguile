@@ -9,6 +9,8 @@ export default function LandingPage() {
     const navigate = useNavigate();
     const [salonsList, setSalonsList] = useState<any[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [featuredSalon, setFeaturedSalon] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
 
     const loadFeatured = (list: any[], index: number) => {
         if (!list.length) return;
