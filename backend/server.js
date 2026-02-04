@@ -594,3 +594,8 @@ app.listen(PORT, async () => {
         console.error('DB Connection Error:', error);
     }
 });
+
+const PORT_FINAL = process.env.PORT || 3001;
+app.listen(PORT_FINAL, () => {
+    console.log(`🚀 SERVIDOR RODANDO NA PORTA ${PORT_FINAL}`);
+});
