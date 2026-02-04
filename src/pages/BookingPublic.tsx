@@ -189,27 +189,39 @@ export default function BookingPublicPage() {
     const handleDownloadPDF = async () => {
         if (!ticketRef.current) return;
         setLoading(true);
-        try {
-            const element = ticketRef.current;
-            const canvas = await html2canvas(element, {
-                scale: 3, // High quality
-                useCORS: true,
-                backgroundColor: '#ffffff'
-            });
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const imgProps = pdf.getImageProperties(imgData);
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        // Give the browser a moment to ensure all styles and external images (QR) are painted
+        setTimeout(async () => {
+            try {
+                const element = ticketRef.current!;
+                const canvas = await html2canvas(element, {
+                    scale: 2, // Optimized for mobile memory
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    logging: false
+                });
 
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Reserva_Xonguile_XON-${result?.id?.toString().padStart(4, '0')}.pdf`);
-        } catch (e) {
-            console.error('Erro ao gerar PDF:', e);
-            alert('Erro ao gerar PDF. Tente imprimir a página.');
-        } finally {
-            setLoading(false);
-        }
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                const pdf = new jsPDF('p', 'mm', 'a4');
+
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+
+                // Calculate dimensions to fit the ticket nicely in the PDF page
+                const canvasWidth = canvas.width;
+                const canvasHeight = canvas.height;
+                const ratio = canvasWidth / pdfWidth;
+                const finalHeight = (canvasHeight / ratio);
+
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, finalHeight);
+                pdf.save(`Reserva_Xonguile_XON-${result?.id?.toString().padStart(4, '0')}.pdf`);
+            } catch (e) {
+                console.error('Erro ao gerar PDF:', e);
+                alert('Ocorreu um problema ao gerar o PDF. Pode tentar tirar um print ou usar a função Imprimir do sistema.');
+            } finally {
+                setLoading(false);
+            }
+        }, 500);
     };
 
     if (loading && step === 1) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-purple-600" size={48} /></div>;
