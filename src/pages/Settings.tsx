@@ -319,8 +319,28 @@ export default function SettingsPage() {
                     </div>
                 )}
             </div>
+
+            {/* PAYPAL SDK SCRIPT */}
+            <PayPalScript />
         </div>
     );
+}
+
+function PayPalScript() {
+    const user = JSON.parse(localStorage.getItem('salao_user') || '{}');
+    const isMaster = user.role?.startsWith('super_');
+
+    // Não carrega o script se for Super Admin ou se já existir
+    if (isMaster || document.getElementById('paypal-sdk-script')) return null;
+
+    const script = document.createElement('script');
+    // USANDO O TEU CLIENT ID RESTRITO PARA O FRONTEND
+    script.src = `https://www.paypal.com/sdk/js?client-id=Ae5ECHexqZZdwVoXY_RqhqEi00m-39EJk0RTvWH7gpXQ3rF3ZvOSKaocFWSjm9CI48FJFZauOMcZHfYD&currency=MZN`;
+    script.id = 'paypal-sdk-script';
+    script.async = true;
+    document.body.appendChild(script);
+
+    return null;
 }
 
 function PlanCard({ name, price, annual, features, color, highlight, btnClass, active, salonId, type, onSuccess }: any) {
@@ -328,14 +348,38 @@ function PlanCard({ name, price, annual, features, color, highlight, btnClass, a
 
     const handlePayPal = async (billingCycle: 'month' | 'year') => {
         if (!salonId) return alert('Carregando informações do salão...');
+        if (!(window as any).paypal) return alert('O PayPal ainda está a carregar... Tente em 2 segundos.');
+
         const finalType = type.replace('month', billingCycle);
+        const finalPrice = billingCycle === 'month' ? price.replace('.', '') : annual.replace('.', '');
+
         setCheckingOut(true);
+
         try {
-            await api.activateSubscription(salonId, finalType);
-            alert(`Plano ${name} (${billingCycle}) ativado!`);
-            onSuccess();
+            // RENDERIZA O BOTÃO OFICIAL PAYPAL
+            (window as any).paypal.Buttons({
+                createOrder: (data: any, actions: any) => {
+                    return actions.order.create({
+                        purchase_units: [{
+                            amount: { value: finalPrice, currency_code: 'MZN' },
+                            description: `Plano Xonguile ${name} - ${billingCycle}`
+                        }]
+                    });
+                },
+                onApprove: async (data: any, actions: any) => {
+                    const details = await actions.order.capture();
+                    // Ativa no nosso backend após sucesso real no PayPal
+                    await api.activateSubscription(salonId, finalType);
+                    alert(`✅ PAGAMENTO CONFIRMADO! Bem-vindo ao plano ${name}.`);
+                    onSuccess();
+                },
+                onError: (err: any) => {
+                    console.error("PayPal Error:", err);
+                    alert("Ocorreu um erro no portal do PayPal.");
+                }
+            }).render('#paypal-button-container-' + name);
         } catch (e) {
-            alert('Falha no pagamento');
+            console.error(e);
         } finally {
             setCheckingOut(false);
         }
@@ -366,13 +410,18 @@ function PlanCard({ name, price, annual, features, color, highlight, btnClass, a
                     ))}
                 </ul>
             </div>
-            <button
-                className={clsx("w-full py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2", btnClass, (active || checkingOut) && "cursor-default opacity-80")}
-                disabled={active || checkingOut}
-                onClick={handlePayPal}
-            >
-                {checkingOut ? <Loader2 className="animate-spin" /> : active ? 'Plano Atual Ativo' : 'Assinar via PayPal'}
-            </button>
+            <div className="space-y-4">
+                <button
+                    className={clsx("w-full py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2", btnClass, (active || checkingOut) && "cursor-default opacity-80")}
+                    disabled={active || checkingOut}
+                    onClick={() => handlePayPal('month')}
+                >
+                    {checkingOut ? <Loader2 className="animate-spin" /> : active ? 'Plano Atual Ativo' : 'Ativar PayPal (Mensal)'}
+                </button>
+                {!active && (
+                    <div id={`paypal-button-container-${name}`} className="mt-2 min-h-[40px] z-50"></div>
+                )}
+            </div>
         </div>
     );
 }
