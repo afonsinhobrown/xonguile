@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Scissors, Lock, Mail, Loader2, Store, Phone, User as UserIcon } from 'lucide-react';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { clsx } from 'clsx';
 
 export default function RegisterPage() {
     const [loading, setLoading] = useState(false);

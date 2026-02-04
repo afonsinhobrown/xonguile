@@ -118,6 +118,28 @@ app.post('/public/book-appointment', async (req, res) => {
     const { salonId, serviceId, date, startTime, clientData } = req.body;
 
     try {
+        // Enforce Plan Limits
+        const salon = await Salon.findByPk(salonId, { include: [License] });
+        if (!salon || !salon.License) throw new Error("Salão não encontrado ou sem licença.");
+
+        const limit = salon.License.bookingLimit || 50;
+
+        // Count appointments for the current month
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        const count = await Appointment.count({
+            where: {
+                SalonId: salonId,
+                createdAt: { [require('sequelize').Op.gte]: startOfMonth }
+            }
+        });
+
+        if (count >= limit) {
+            throw new Error(`Este salão atingiu o limite de agendamentos online para o plano atual (${limit}). Por favor, contacte o salão diretamente.`);
+        }
+
         const result = await sequelize.transaction(async (t) => {
             // Find or Create Client
             let client = null;

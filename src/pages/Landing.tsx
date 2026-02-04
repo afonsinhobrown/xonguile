@@ -1,6 +1,7 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
-import { ArrowRight, Star, Scissors, Calendar, ShieldCheck, CheckCircle2, Menu } from 'lucide-react';
+import { ArrowRight, Star, Scissors, Calendar, ShieldCheck, CheckCircle2, Menu, CheckCircle } from 'lucide-react';
+import { clsx } from 'clsx';
 
 export default function LandingPage() {
     const navigate = useNavigate();
