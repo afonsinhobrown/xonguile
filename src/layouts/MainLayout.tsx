@@ -52,8 +52,7 @@ export function MainLayout() {
                     {isSuper ? (
                         <>
                             <NavItem to="/admin/super" icon={<Shield size={20} />} label="Painel Super Admin" />
-                            <NavItem to="/admin/clientes" icon={<Users size={20} />} label="Base de Clientes" />
-                            <NavItem to="/admin/financeiro" icon={<Banknote size={20} />} label="Receitas Totais" />
+                            <NavItem to="/admin/financeiro" icon={<Banknote size={20} />} label="Receitas Globais" />
                         </>
                     ) : (
                         <>
@@ -69,7 +68,11 @@ export function MainLayout() {
                         </>
                     )}
                     <div className="pt-4 mt-4 border-t border-gray-100">
-                        <NavItem to="/admin/configuracoes" icon={<Settings size={20} />} label="Configurações" />
+                        <NavItem
+                            to={isSuper ? "/admin/super" : "/admin/configuracoes"}
+                            icon={<Settings size={20} />}
+                            label="Configurações"
+                        />
                     </div>
                 </nav>
 
@@ -175,6 +178,7 @@ function MobileNavItem({ to, icon, label }: { to: string, icon: React.ReactNode,
 }
 
 function LicenseBadge() {
+    const user = JSON.parse(localStorage.getItem('salao_user') || '{}');
     const license = user?.salon?.License || user?.salon?.license;
 
     if (!license) return null;

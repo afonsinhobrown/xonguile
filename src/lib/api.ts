@@ -96,6 +96,10 @@ export const api = {
     createSuperAssistant: async (data: any) => fetch(`${API_URL}/admin/create-super-2`, {
         method: 'POST', body: JSON.stringify(data), headers: getHeaders()
     }).then(res => res.json()),
+    impersonateSalon: async (id: number) => fetch(`${API_URL}/admin/salons/${id}/impersonate`, {
+        method: 'POST', headers: getHeaders()
+    }).then(res => res.json()),
+    getSuperStats: async () => fetch(`${API_URL}/admin/stats`, { headers: getHeaders() }).then(res => res.json()),
 
     // --- PUBLIC METHODS ---
     publicListSalons: async () => fetch(`${API_URL}/public/salons`).then(res => res.json()),

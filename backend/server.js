@@ -348,7 +348,7 @@ app.post('/login', async (req, res) => {
 
 // --- SUPER ADMIN ROUTES ---
 
-// 1. Get all salons with license info
+// 1. Get all salons with license and admin info
 app.get('/admin/salons', async (req, res) => {
     if (!['super_level_1', 'super_level_2'].includes(req.user.role)) return res.status(403).json({ error: 'Acesso negado' });
     const salons = await Salon.findAll({
@@ -360,7 +360,44 @@ app.get('/admin/salons', async (req, res) => {
     res.json(salons);
 });
 
-// 2. Update Salon Status or License
+// 2. Impersonate Salon (ENTRAR NO SALÃO)
+app.post('/admin/salons/:id/impersonate', async (req, res) => {
+    if (req.user.role !== 'super_level_1') return res.status(403).json({ error: 'Apenas Master pode impersonar' });
+    const admin = await User.findOne({ where: { SalonId: req.params.id, role: 'admin' }, include: [Salon] });
+    if (!admin) return res.status(404).json({ error: 'Admin do salão não encontrado' });
+
+    res.json({
+        id: admin.id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+        SalonId: admin.SalonId,
+        salon: {
+            name: admin.Salon.name,
+            slug: admin.Salon.slug,
+            license: admin.Salon.License
+        }
+    });
+});
+
+// 3. Global Stats (RECEITAS GLOBAIS)
+app.get('/admin/stats', async (req, res) => {
+    if (!['super_level_1', 'super_level_2'].includes(req.user.role)) return res.status(403).json({ error: 'Acesso negado' });
+
+    const licenseRevenue = await Transaction.sum('amount', { where: { type: 'license_payment' } }) || 0;
+    const totalGmv = await Transaction.sum('amount', { where: { type: 'income' } }) || 0;
+    const totalSalons = await Salon.count();
+    const activeSalons = await License.count({ where: { status: 'active' } });
+
+    res.json({
+        licenseRevenue,
+        totalGmv,
+        totalSalons,
+        activeSalons
+    });
+});
+
+// 4. Update License
 app.put('/admin/salons/:id/license', async (req, res) => {
     if (!['super_level_1', 'super_level_2'].includes(req.user.role)) return res.status(403).json({ error: 'Acesso negado' });
     const { type, status, validUntil, bookingLimit, hasWaitingList, reportLevel } = req.body;
@@ -373,12 +410,12 @@ app.put('/admin/salons/:id/license', async (req, res) => {
     }
 });
 
-// 3. Create Super Level 2 User (Level 1 only)
+// 5. Create Super Assistant
 app.post('/admin/create-super-2', async (req, res) => {
     if (req.user.role !== 'super_level_1') return res.status(403).json({ error: 'Apenas Super Nível 1 podem criar assistentes.' });
     const { name, email, password } = req.body;
     const user = await User.create({
-        name, email, password, role: 'super_level_2', parentId: req.user.id
+        name, email, password, role: 'super_level_2'
     });
     res.json(user);
 });
