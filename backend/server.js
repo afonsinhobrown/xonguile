@@ -160,7 +160,9 @@ app.get('/public/client-lookup', async (req, res) => {
 
 // 6. Public Booking
 app.post('/public/book-appointment', async (req, res) => {
-    const { salonId, serviceId, date, startTime, clientData } = req.body;
+    let { salonId, serviceId, date, startTime, time, clientData } = req.body;
+    if (!startTime && time) startTime = time;
+    if (!startTime) startTime = '09:00';
 
     try {
         // Enforce Plan Limits

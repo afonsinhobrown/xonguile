@@ -104,7 +104,7 @@ export default function BookingPublicPage() {
                 salonId: parseInt(salonId!),
                 serviceId: parseInt(selectedService.id),
                 date: selectedDate,
-                time: selectedTime,
+                startTime: selectedTime,
                 clientData: clientPayload
             };
             if (selectedProfessional) payload.professionalId = parseInt(selectedProfessional.id);
