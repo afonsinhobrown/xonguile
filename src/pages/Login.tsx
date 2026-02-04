@@ -71,7 +71,7 @@ export default function LoginPage() {
                         <Scissors size={32} />
                     </div>
                     <h1 className="text-2xl font-bold text-gray-800">Xonguile App</h1>
-                    <p className="text-gray-500 text-sm mt-1">Gestão de Beleza por #EncubadoraDeSoluções</p>
+                    <p className="text-gray-500 text-sm mt-1">Gestão de Beleza por #IncubadoraDeSoluções</p>
                 </div>
 
                 <div className="p-8">

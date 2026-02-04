@@ -12,37 +12,37 @@ export default function LandingPage() {
     const [featuredSalon, setFeaturedSalon] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
-    const loadFeatured = (list: any[], index: number) => {
+    const loadFeatured = (list: any[], index: number, isInitial = false) => {
         if (!list.length) return;
-        setLoading(true);
+        if (isInitial) setLoading(true);
         api.publicGetSalon(list[index].id).then(fullData => {
             setFeaturedSalon(fullData);
-            setLoading(false);
-        }).catch(() => setLoading(false));
+            if (isInitial) setLoading(false);
+        }).catch(() => {
+            if (isInitial) setLoading(false);
+        });
     };
 
     useEffect(() => {
         api.publicListSalons().then(list => {
             if (list && list.length > 0) {
                 setSalonsList(list);
-                // Start with a random one
                 const randomIdx = Math.floor(Math.random() * list.length);
                 setCurrentIndex(randomIdx);
-                loadFeatured(list, randomIdx);
+                loadFeatured(list, randomIdx, true); // First load shows spinner
             } else {
                 setLoading(false);
             }
         }).catch(() => setLoading(false));
     }, []);
 
-    // Auto-rotate every 10 seconds if there's more than one salon
     useEffect(() => {
         if (salonsList.length <= 1) return;
 
         const interval = setInterval(() => {
             setCurrentIndex(prev => {
                 const next = (prev + 1) % salonsList.length;
-                loadFeatured(salonsList, next);
+                loadFeatured(salonsList, next, false); // Rotation is silent
                 return next;
             });
         }, 10000);
@@ -94,6 +94,7 @@ export default function LandingPage() {
                         src="/hero-bg.png"
                         alt="Mulher Moçambicana Beleza"
                         className="w-full h-full object-cover opacity-60"
+                        loading="eager"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-purple-900/30" />
                 </div>
@@ -148,15 +149,18 @@ export default function LandingPage() {
 
                     {/* Right Side: Dynamic Partner Card */}
                     <div className="hidden lg:block relative min-h-[400px]">
-                        {loading ? (
+                        {loading && !featuredSalon ? (
                             <div className="flex items-center justify-center h-full">
                                 <Loader2 className="animate-spin text-purple-400" size={48} />
                             </div>
                         ) : featuredSalon ? (
-                            <div className="relative z-10 bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-3xl shadow-2xl transform rotate-3 hover:rotate-0 transition-all duration-700">
+                            <div className="relative z-10 bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-3xl shadow-2xl transform rotate-3 hover:rotate-0 transition-all duration-700 animate-in fade-in zoom-in-95 duration-700">
                                 <div className="flex items-center justify-between mb-6">
                                     <div>
-                                        <p className="text-gray-400 text-xs uppercase tracking-wider">Parceiro Destaque</p>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <p className="text-gray-400 text-xs uppercase tracking-wider">Parceiro Destaque</p>
+                                            {loading && <Loader2 className="animate-spin text-purple-400" size={12} />}
+                                        </div>
                                         <h3 className="text-white text-2xl font-bold">{featuredSalon.name}</h3>
                                     </div>
                                     <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-300">
@@ -263,7 +267,7 @@ export default function LandingPage() {
                     <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-12">
                         <div>
                             <span className="font-bold text-2xl text-white">Xonguile<span className="text-purple-500">App</span></span>
-                            <p className="text-gray-400 mt-2 max-w-xs">A revolução digital da beleza moçambicana. Desenvolvido com orgulho pela #EncubadoraDeSoluções.</p>
+                            <p className="text-gray-400 mt-2 max-w-xs">A revolução digital da beleza moçambicana. Desenvolvido com orgulho pela #IncubadoraDeSoluções.</p>
                         </div>
                         <div className="flex gap-6 text-gray-400">
                             <a href="#" className="hover:text-white transition-colors">Instagram</a>
