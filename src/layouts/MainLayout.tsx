@@ -178,8 +178,8 @@ function MobileNavItem({ to, icon, label }: { to: string, icon: React.ReactNode,
 }
 
 function LicenseBadge() {
-    const user = JSON.parse(localStorage.getItem('salao_user') || '{}');
-    const license = user?.salon?.License || user?.salon?.license;
+    const userData = JSON.parse(localStorage.getItem('salao_user') || '{}');
+    const license = userData?.salon?.License || userData?.salon?.license;
 
     if (!license) return null;
 
@@ -188,7 +188,8 @@ function LicenseBadge() {
     const isGold = license.type?.includes('gold');
     const isStandard = license.type?.includes('standard');
 
-    const daysLeft = Math.ceil((new Date(license.validUntil).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+    const validDate = license.validUntil ? new Date(license.validUntil) : new Date();
+    const daysLeft = Math.ceil((validDate.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
 
     let label = 'Trial';
     if (isStandard) label = 'Standard';
@@ -203,7 +204,7 @@ function LicenseBadge() {
                     isGold ? "bg-amber-100 text-amber-700 border border-amber-200" :
                         "bg-blue-100 text-blue-700 border border-blue-200"
         )}>
-            {label} • {daysLeft}d
+            {label} • {daysLeft > 0 ? daysLeft : 0}d
         </div>
     );
 }
