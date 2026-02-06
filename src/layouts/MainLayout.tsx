@@ -1,7 +1,6 @@
-import {
-    Calendar as CalendarIcon,
+Calendar as CalendarIcon,
     LayoutDashboard,
-    Users,
+    Users as UsersIcon,
     Scissors,
     Package,
     Settings,
@@ -12,7 +11,8 @@ import {
     Menu,
     Clock,
     Shield,
-    MessageCircle
+    MessageCircle,
+    ArrowLeft
 } from 'lucide-react';
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import { clsx } from 'clsx';
@@ -31,6 +31,7 @@ export function MainLayout() {
     const user = getUserData();
     const license = user?.salon?.License || user?.salon?.license || {};
     const isSuper = user.role?.startsWith('super_');
+    const isMaster = user.isMaster || localStorage.getItem('is_master') === 'true';
     const isTrial = license.type === 'trial';
     const isStandardOrGold = license.type?.includes('standard') || license.type?.includes('gold') || license.type?.includes('premium');
     const salonName = user?.salon?.name || 'Seu Salão';
@@ -70,7 +71,7 @@ export function MainLayout() {
                             <NavItem to="/admin/caixa" icon={<ShoppingCart size={20} />} label="Caixa / PDV" />
                             <NavItem to="/admin/agenda" icon={<CalendarIcon size={20} />} label="Agenda" />
                             <NavItem to="/admin/fila" icon={<Clock size={20} />} label="Fila de Atendimento" />
-                            <NavItem to="/admin/clientes" icon={<Users size={20} />} label="Clientes" />
+                            <NavItem to="/admin/clientes" icon={<UsersIcon size={20} />} label="Clientes" />
                             <NavItem to="/admin/profissionais" icon={<Scissors size={20} />} label="Profissionais" />
                             <NavItem to="/admin/servicos" icon={<Sparkles size={20} />} label="Serviços" />
                             <NavItem to="/admin/estoque" icon={<Package size={20} />} label="Estoque" />
@@ -87,10 +88,27 @@ export function MainLayout() {
                     </div>
                 </nav>
 
-                <div className="p-4 border-t border-gray-100">
+                <div className="p-4 border-t border-gray-100 flex flex-col gap-2">
+                    {isMaster && !isSuper && (
+                        <button
+                            onClick={() => {
+                                const masterData = JSON.parse(localStorage.getItem('master_user_original') || '{}');
+                                if (masterData.id) {
+                                    localStorage.setItem('salao_user', JSON.stringify(masterData));
+                                    window.location.href = '/admin/super';
+                                }
+                            }}
+                            className="flex items-center gap-3 w-full p-2 rounded-lg bg-gray-900 text-white hover:bg-black transition-colors text-xs font-bold shadow-lg"
+                        >
+                            <ArrowLeft size={16} />
+                            <span>Voltar ao Painel Super</span>
+                        </button>
+                    )}
                     <button
                         onClick={() => {
                             localStorage.removeItem('salao_user');
+                            localStorage.removeItem('is_master');
+                            localStorage.removeItem('master_user_original');
                             window.location.href = '/login';
                         }}
                         className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors text-sm font-medium"

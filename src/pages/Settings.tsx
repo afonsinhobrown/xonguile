@@ -3,7 +3,7 @@ import { api } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import {
-    Save, Building, Receipt, Users, Trash2, Plus, Upload,
+    Save, Building, Receipt, Users as UsersIcon, Trash2, Plus, Upload,
     Sparkles, CheckCircle, Loader2, Shield, Lock, CreditCard, FileText
 } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -98,7 +98,7 @@ export default function SettingsPage() {
 
                 <div className="flex gap-4 mt-6 overflow-x-auto pb-2 scrollbar-none">
                     <TabButton active={activeTab === 'salon'} onClick={() => setActiveTab('salon')} icon={<Building size={18} />}>Dados do Salão</TabButton>
-                    <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<Users size={18} />}>Gestão de Usuários</TabButton>
+                    <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<UsersIcon size={18} />}>Gestão de Usuários</TabButton>
                     <TabButton active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon={<FileText size={18} />}>Documentos & PDFs</TabButton>
                     <TabButton active={activeTab === 'plans'} onClick={() => setActiveTab('plans')} icon={<CreditCard size={18} />}>Assinatura & Planos</TabButton>
                 </div>

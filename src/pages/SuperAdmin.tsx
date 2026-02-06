@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import {
-    Users, Store, CreditCard, Shield, Plus,
-    CheckCircle, XCircle, MoreVertical, Edit, Search, UserPlus, Banknote, Mail, ArrowRight
+    Users as UsersIcon, Store, CreditCard, Shield, Plus,
+    CheckCircle, XCircle, MoreVertical, Edit, Search, UserPlus, Banknote, Mail, ArrowRight,
+    AlertTriangle
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -15,6 +16,20 @@ export default function SuperAdminPage() {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'salons' | 'finance' | 'supers' | 'settings' | 'communications'>('salons');
     const user = JSON.parse(localStorage.getItem('salao_user') || '{}');
+    const isSuper = user.role?.startsWith('super_');
+
+    if (!isSuper) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-10">
+                <div className="w-20 h-20 bg-red-100 text-red-600 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-red-100/50">
+                    <AlertTriangle size={40} />
+                </div>
+                <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Acesso Negado</h2>
+                <p className="text-gray-500 mt-2 max-w-sm">Deverás estar logado como Super Administrador para aceder a esta área global do sistema.</p>
+                <Button className="mt-8" onClick={() => window.location.href = '/admin'}>Voltar ao Painel Pessoal</Button>
+            </div>
+        );
+    }
 
     const loadData = async () => {
         setLoading(true);
@@ -51,6 +66,11 @@ export default function SuperAdminPage() {
         if (!confirm('Deseja entrar neste salão como administrador?')) return;
         try {
             const adminData = await api.impersonateSalon(salonId);
+            // Preserve master session flag
+            if (user.isMaster) {
+                adminData.isMaster = true;
+                localStorage.setItem('is_master', 'true');
+            }
             localStorage.setItem('salao_user', JSON.stringify(adminData));
             window.location.href = '/admin'; // Redirect and force reload
         } catch (e) {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import {
-    DollarSign, Calendar, TrendingUp, Users, ArrowUpRight, ArrowDownRight,
+    DollarSign, Calendar, TrendingUp, Users as UsersIcon, ArrowUpRight, ArrowDownRight,
     Plus, ShoppingCart, UserPlus, Scissors, Sparkles, Banknote
 } from 'lucide-react';
 import { DateTime } from 'luxon';
@@ -85,7 +85,7 @@ export default function DashboardPage() {
                     <StatsCard
                         title="Total Clientes"
                         value={clientsCount.toString()}
-                        icon={<Users size={24} className="text-orange-600" />}
+                        icon={<UsersIcon size={24} className="text-orange-600" />}
                         color="bg-orange-50 border-orange-100"
                     />
                 </div>
