@@ -126,6 +126,9 @@ const Ticket = sequelize.define('Ticket', {
     subject: { type: DataTypes.STRING, allowNull: false },
     status: { type: DataTypes.ENUM('open', 'pending', 'resolved', 'closed'), defaultValue: 'open' },
     priority: { type: DataTypes.ENUM('low', 'medium', 'high', 'urgent'), defaultValue: 'medium' }
+    ,
+    // PeerJS ID published by support when they listen for voice calls
+    supportPeerId: { type: DataTypes.STRING, allowNull: true }
 });
 
 const Message = sequelize.define('Message', {

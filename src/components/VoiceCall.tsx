@@ -3,7 +3,7 @@ import Peer from 'peerjs';
 import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { Button } from './ui/Button';
 
-export default function VoiceCallComponent({ contactId, contactName }: { contactId: string; contactName: string }) {
+export default function VoiceCallComponent({ contactId, contactName, onPeerOpen }: { contactId: string; contactName: string; onPeerOpen?: (id: string) => void }) {
     const [peer, setPeer] = useState<Peer | null>(null);
     const [peerId, setPeerId] = useState<string>('');
     const [inCall, setInCall] = useState(false);
@@ -23,6 +23,7 @@ export default function VoiceCallComponent({ contactId, contactName }: { contact
         newPeer.on('open', (id) => {
             setPeerId(id);
             console.log('Peer ID:', id);
+            if (onPeerOpen) onPeerOpen(id);
         });
 
         newPeer.on('call', async (call) => {

@@ -162,7 +162,11 @@ export default function SupportPage() {
                                     <X size={18} />
                                 </button>
                             </div>
-                            <VoiceCall contactId={`super_admin_${Math.random().toString(36).substr(2, 9)}`} contactName="Super Administrador" />
+                            {selectedTicket?.supportPeerId ? (
+                                <VoiceCall contactId={selectedTicket.supportPeerId} contactName="Super Administrador" />
+                            ) : (
+                                <div className="p-4 text-sm text-gray-500">Suporte indisponível para chamadas de voz agora.</div>
+                            )}
                         </div>
                     )}
                     {selectedTicket ? (
@@ -181,7 +185,7 @@ export default function SupportPage() {
                                 </div>
                                 <div className="flex items-center gap-3">
                                     {!isSuper && (
-                                        <Button 
+                                        <Button
                                             onClick={() => setIsVoiceCallOpen(true)}
                                             className="text-blue-600 border-blue-100 hover:bg-blue-50 text-xs py-2 h-auto font-bold flex items-center gap-2"
                                             variant="secondary"

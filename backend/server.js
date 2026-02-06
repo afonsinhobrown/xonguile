@@ -241,6 +241,24 @@ app.get('/public/client-appointments/:clientId', async (req, res) => {
     }
 });
 
+// Update ticket's support Peer ID (called by Super when they start listening)
+app.put('/tickets/:id/support-peer', async (req, res) => {
+    try {
+        if (!['super_level_1', 'super_level_2'].includes(req.user.role) && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Acesso negado' });
+        }
+        const ticket = await Ticket.findByPk(req.params.id);
+        if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
+
+        const { supportPeerId } = req.body;
+        await ticket.update({ supportPeerId: supportPeerId || null });
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
 app.post('/register-salon', async (req, res) => {
     const { salonName, adminName, adminEmail, adminPassword, phone } = req.body;
 

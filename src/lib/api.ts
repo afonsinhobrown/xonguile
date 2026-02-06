@@ -128,6 +128,9 @@ export const api = {
     addTicketMessage: async (id: number, content: string) => fetch(`${API_URL}/tickets/${id}/messages`, {
         method: 'POST', body: JSON.stringify({ content }), headers: getHeaders()
     }).then(handleResponse),
+    updateTicketSupportPeer: async (ticketId: number, supportPeerId: string | null) => fetch(`${API_URL}/tickets/${ticketId}/support-peer`, {
+        method: 'PUT', body: JSON.stringify({ supportPeerId }), headers: getHeaders()
+    }).then(handleResponse),
 
     // Public
     publicListSalons: async () => fetch(`${API_URL}/public/salons`).then(handleResponse),

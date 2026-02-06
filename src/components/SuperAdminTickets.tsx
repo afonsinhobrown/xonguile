@@ -31,6 +31,21 @@ export default function SuperAdminTickets() {
         return () => clearInterval(interval);
     }, [selectedTicket?.id]);
 
+    // Clear supportPeerId when leaving the selected ticket (cleanup)
+    useEffect(() => {
+        if (!selectedTicket) return;
+        const id = selectedTicket.id;
+        return () => {
+            (async () => {
+                try {
+                    await api.updateTicketSupportPeer?.(id, null);
+                } catch (e) {
+                    // ignore
+                }
+            })();
+        };
+    }, [selectedTicket?.id]);
+
     const loadTickets = async () => {
         setLoading(true);
         try {
@@ -131,10 +146,17 @@ export default function SuperAdminTickets() {
                             </p>
                         </div>
 
-                        {/* Voice Call Component */}
+                        {/* Voice Call Component - Super listens and publishes Peer ID to ticket */}
                         <VoiceCall
-                            contactId={selectedTicket.Salon?.id || ''}
+                            contactId={''}
                             contactName={selectedTicket.Salon?.name || 'Salão'}
+                            onPeerOpen={async (peerId: string) => {
+                                try {
+                                    await api.updateTicketSupportPeer?.(selectedTicket.id, peerId);
+                                } catch (e) {
+                                    console.error('Failed to publish support peer id', e);
+                                }
+                            }}
                         />
 
                         <div className="border-t border-gray-200 pt-4">
