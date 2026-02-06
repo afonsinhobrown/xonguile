@@ -126,7 +126,7 @@ export default function SuperAdminPage() {
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
                                     {salons.map(s => {
-                                        const admin = s.Users?.find((u: any) => u.role === 'admin');
+                                        const admin = (s.Users || [])?.find?.((u: any) => u.role === 'admin');
                                         return (
                                             <tr key={s.id} className="hover:bg-gray-50/50 transition-colors group">
                                                 <td className="px-6 py-5">

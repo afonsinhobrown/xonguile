@@ -308,7 +308,7 @@ app.post('/login', async (req, res) => {
 
 // 1. Get all salons with license and admin info
 app.get('/admin/salons', async (req, res) => {
-    if (!['super_level_1', 'super_level_2'].includes(req.user.role)) {
+    if (!['super_level_1', 'super_level_2', 'admin'].includes(req.user.role)) {
         console.log(`[403] Access Denied to /admin/salons. User role: ${req.user.role}`);
         return res.status(403).json({ error: 'Acesso negado' });
     }
@@ -343,7 +343,7 @@ app.post('/admin/salons/:id/impersonate', async (req, res) => {
 
 // 3. Global Stats (RECEITAS GLOBAIS)
 app.get('/admin/stats', async (req, res) => {
-    if (!['super_level_1', 'super_level_2'].includes(req.user.role)) return res.status(403).json({ error: 'Acesso negado' });
+    if (!['super_level_1', 'super_level_2', 'admin'].includes(req.user.role)) return res.status(403).json({ error: 'Acesso negado' });
 
     const licenseRevenue = (await Transaction.sum('amount', { where: { type: 'license_payment' } })) || 0;
     const totalGmv = (await Transaction.sum('amount', { where: { type: 'income' } })) || 0;
