@@ -10,12 +10,13 @@ import { Input } from '../components/ui/Input';
 import { DateTime } from 'luxon';
 import { clsx } from 'clsx';
 import SuperAdminEmails from '../components/SuperAdminEmails';
+import SuperAdminTickets from '../components/SuperAdminTickets';
 
 export default function SuperAdminPage() {
     const [salons, setSalons] = useState<any[]>([]);
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'salons' | 'finance' | 'supers' | 'settings' | 'communications' | 'emails'>('salons');
+    const [activeTab, setActiveTab] = useState<'salons' | 'finance' | 'supers' | 'settings' | 'communications' | 'emails' | 'tickets'>('salons');
     const user = JSON.parse(localStorage.getItem('salao_user') || '{}');
     const isSuper = user.role?.startsWith('super_');
 
@@ -93,6 +94,7 @@ export default function SuperAdminPage() {
                     <TabBtn active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} label="Financeiro" />
                     <TabBtn active={activeTab === 'supers'} onClick={() => setActiveTab('supers')} label="Equipa Super" />
                     <TabBtn active={activeTab === 'emails'} onClick={() => setActiveTab('emails')} label="Emails" />
+                    <TabBtn active={activeTab === 'tickets'} onClick={() => setActiveTab('tickets')} label="Tickets" />
                     <TabBtn active={activeTab === 'communications'} onClick={() => setActiveTab('communications')} label="Comunicação" />
                     {user.role === 'super_level_1' && (
                         <TabBtn active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} label="Configurações" />
@@ -261,6 +263,14 @@ export default function SuperAdminPage() {
                                     <SuperAdminEmails />
                                 </div>
                             )}
+
+                            {activeTab === 'tickets' && (
+                                <div className="space-y-8 animate-in fade-in duration-500">
+                                    <h2 className="text-3xl font-black text-gray-900 tracking-tighter">Gestão de Suporte (Tickets)</h2>
+                                    <SuperAdminTickets />
+                                </div>
+                            )}
+
                             {activeTab === 'communications' && (
                                 <div className="space-y-8 animate-in fade-in duration-500">
                                     <h2 className="text-3xl font-black text-gray-900 tracking-tighter">Central de Comunicação</h2>

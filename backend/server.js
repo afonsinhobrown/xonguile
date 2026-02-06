@@ -644,6 +644,36 @@ app.get('/transactions', async (req, res) => {
 });
 app.post('/transactions', async (req, res) => res.json(await Transaction.create(attachSalon(req))));
 
+// Get all tickets (SUPER ADMIN)
+app.get('/admin/tickets', async (req, res) => {
+    if (!['super_level_1', 'super_level_2', 'admin'].includes(req.user.role)) {
+        return res.status(403).json({ error: 'Acesso negado' });
+    }
+    const tickets = await Ticket.findAll({
+        include: [
+            { model: Salon, attributes: ['id', 'name'] },
+            { model: Message, include: [User] }
+        ],
+        order: [['createdAt', 'DESC']]
+    });
+    res.json(tickets);
+});
+
+// Add reply to ticket (SUPER ADMIN)
+app.post('/admin/tickets/:id/reply', async (req, res) => {
+    if (!['super_level_1', 'super_level_2', 'admin'].includes(req.user.role)) {
+        return res.status(403).json({ error: 'Acesso negado' });
+    }
+    const { message } = req.body;
+    const msg = await Message.create({
+        message,
+        isAdmin: true,
+        UserId: req.user.id,
+        TicketId: req.params.id
+    });
+    res.json(msg);
+});
+
 // --- SUBSCRIPTION & PAYPAL ---
 app.post('/subscription/activate', async (req, res) => {
     // In prod, verify with PayPal API!

@@ -165,4 +165,8 @@ export const api = {
     sendCustomEmail: async (subject: string, body: string, clientIds: number[], customEmails: string[]) => fetch(`${API_URL}/admin/send-email/custom`, {
         method: 'POST', body: JSON.stringify({ subject, body, clientIds, customEmails }), headers: getHeaders()
     }).then(handleResponse),
+    getSuperTickets: async () => fetch(`${API_URL}/admin/tickets`, { headers: getHeaders() }).then(handleResponse).catch(() => []),
+    addTicketReply: async (ticketId: number, data: any) => fetch(`${API_URL}/admin/tickets/${ticketId}/reply`, {
+        method: 'POST', body: JSON.stringify(data), headers: getHeaders()
+    }).then(handleResponse),
 };
