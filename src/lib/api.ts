@@ -152,4 +152,16 @@ export const api = {
     activateSubscription: async (salonId: number, type: string) => fetch(`${API_URL}/subscription/activate`, {
         method: 'POST', body: JSON.stringify({ salonId, type }), headers: getHeaders()
     }).then(handleResponse),
+
+    // Super Admin: Email Management
+    getSuperAdminClients: async () => fetch(`${API_URL}/admin/clients`, { headers: getHeaders() }).then(handleResponse).catch(() => []),
+    sendWelcomeEmail: async (clientIds: number[]) => fetch(`${API_URL}/admin/send-email/welcome`, {
+        method: 'POST', body: JSON.stringify({ clientIds }), headers: getHeaders()
+    }).then(handleResponse),
+    sendRestoreEmail: async (clientIds: number[]) => fetch(`${API_URL}/admin/send-email/restore`, {
+        method: 'POST', body: JSON.stringify({ clientIds }), headers: getHeaders()
+    }).then(handleResponse),
+    sendCustomEmail: async (subject: string, body: string, clientIds: number[], customEmails: string[]) => fetch(`${API_URL}/admin/send-email/custom`, {
+        method: 'POST', body: JSON.stringify({ subject, body, clientIds, customEmails }), headers: getHeaders()
+    }).then(handleResponse),
 };

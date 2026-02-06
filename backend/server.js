@@ -691,4 +691,75 @@ app.listen(START_PORT, async () => {
     }
 });
 
+// --- SUPER ADMIN: EMAIL MANAGEMENT ---
+// Get all clients from all salons
+app.get('/admin/clients', async (req, res) => {
+    if (!['super_level_1', 'super_level_2', 'admin'].includes(req.user.role)) {
+        return res.status(403).json({ error: 'Acesso negado' });
+    }
+    const clients = await Client.findAll({
+        include: [{ model: Salon, attributes: ['id', 'name'] }],
+        order: [['createdAt', 'DESC']]
+    });
+    res.json(clients);
+});
+
+// Send welcome email
+app.post('/admin/send-email/welcome', async (req, res) => {
+    if (!['super_level_1', 'super_level_2', 'admin'].includes(req.user.role)) {
+        return res.status(403).json({ error: 'Acesso negado' });
+    }
+    const { clientIds } = req.body;
+    const clients = await Client.findAll({ where: { id: clientIds } });
+
+    for (const client of clients) {
+        await sendEmail(
+            client.email,
+            'Bem-vindo à Xonguile App!',
+            `<h2>Bem-vindo, ${client.name}!</h2><p>Estamos felizes em tê-lo conosco.</p>`
+        );
+    }
+    res.json({ success: true, sent: clients.length });
+});
+
+// Send system restore email
+app.post('/admin/send-email/restore', async (req, res) => {
+    if (!['super_level_1', 'super_level_2', 'admin'].includes(req.user.role)) {
+        return res.status(403).json({ error: 'Acesso negado' });
+    }
+    const { clientIds } = req.body;
+    const clients = await Client.findAll({ where: { id: clientIds } });
+
+    for (const client of clients) {
+        await sendEmail(
+            client.email,
+            'Restauração do Sistema',
+            `<h2>Aviso Importante</h2><p>Realizamos uma restauração no sistema. Seu acesso foi restaurado com sucesso!</p>`
+        );
+    }
+    res.json({ success: true, sent: clients.length });
+});
+
+// Send custom email
+app.post('/admin/send-email/custom', async (req, res) => {
+    if (!['super_level_1', 'super_level_2', 'admin'].includes(req.user.role)) {
+        return res.status(403).json({ error: 'Acesso negado' });
+    }
+    const { subject, body, clientIds, customEmails } = req.body;
+    const allEmails = [];
+
+    if (clientIds && clientIds.length > 0) {
+        const clients = await Client.findAll({ where: { id: clientIds } });
+        allEmails.push(...clients.map(c => c.email));
+    }
+    if (customEmails) {
+        allEmails.push(...customEmails.filter(e => e && !allEmails.includes(e)));
+    }
+
+    for (const email of allEmails) {
+        await sendEmail(email, subject, body);
+    }
+    res.json({ success: true, sent: allEmails.length });
+});
+
 // Server already started above with database sync

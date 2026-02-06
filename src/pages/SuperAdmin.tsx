@@ -9,12 +9,13 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { DateTime } from 'luxon';
 import { clsx } from 'clsx';
+import SuperAdminEmails from '../components/SuperAdminEmails';
 
 export default function SuperAdminPage() {
     const [salons, setSalons] = useState<any[]>([]);
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'salons' | 'finance' | 'supers' | 'settings' | 'communications'>('salons');
+    const [activeTab, setActiveTab] = useState<'salons' | 'finance' | 'supers' | 'settings' | 'communications' | 'emails'>('salons');
     const user = JSON.parse(localStorage.getItem('salao_user') || '{}');
     const isSuper = user.role?.startsWith('super_');
 
@@ -91,6 +92,7 @@ export default function SuperAdminPage() {
                     <TabBtn active={activeTab === 'salons'} onClick={() => setActiveTab('salons')} label="Salões" />
                     <TabBtn active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} label="Financeiro" />
                     <TabBtn active={activeTab === 'supers'} onClick={() => setActiveTab('supers')} label="Equipa Super" />
+                    <TabBtn active={activeTab === 'emails'} onClick={() => setActiveTab('emails')} label="Emails" />
                     <TabBtn active={activeTab === 'communications'} onClick={() => setActiveTab('communications')} label="Comunicação" />
                     {user.role === 'super_level_1' && (
                         <TabBtn active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} label="Configurações" />
@@ -113,87 +115,81 @@ export default function SuperAdminPage() {
                     </div>
 
                     {activeTab === 'salons' && (
-                        <div className="bg-white rounded-[2rem] border border-gray-200 overflow-hidden shadow-sm">
-                            <table className="w-full text-left border-collapse">
-                                <thead className="bg-gray-50/50 border-b border-gray-100">
-                                    <tr>
-                                        <th className="px-6 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Salão</th>
-                                        <th className="px-6 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Admin</th>
-                                        <th className="px-6 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Plano</th>
-                                        <th className="px-6 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Estado</th>
-                                        <th className="px-6 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {salons.map(s => {
-                                        const admin = (s.Users || [])?.find?.((u: any) => u.role === 'admin');
-                                        return (
-                                            <tr key={s.id} className="hover:bg-gray-50/50 transition-colors group">
-                                                <td className="px-6 py-5">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-lg shadow-purple-600/20">
-                                                            {s.name[0]}
+                        <div className="bg-white rounded-[2rem] border border-gray-200 overflow-hidden shadow-sm h-[600px] flex flex-col">
+                            <div className="overflow-y-auto flex-1">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="bg-gray-50/50 border-b border-gray-100 sticky top-0">
+                                        <tr>
+                                            <th className="px-6 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Salão</th>
+                                            <th className="px-6 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Admin</th>
+                                            <th className="px-6 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Plano</th>
+                                            <th className="px-6 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Estado</th>
+                                            <th className="px-6 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {salons.map(s => {
+                                            const admin = (s.Users || [])?.find?.((u: any) => u.role === 'admin');
+                                            const isActive = s.License?.status === 'active';
+                                            return (
+                                                <tr key={s.id} className="hover:bg-gray-50/50 transition-colors group">
+                                                    <td className="px-6 py-5">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-lg shadow-purple-600/20">
+                                                                {s.name[0]}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-black text-gray-800 leading-tight">{s.name}</p>
+                                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">slug: {s.slug}</p>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <p className="font-black text-gray-800 leading-tight">{s.name}</p>
-                                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">slug: {s.slug}</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-5">
-                                                    <p className="text-sm font-bold text-gray-700">{admin?.name || '---'}</p>
-                                                    <p className="text-xs text-gray-400 font-medium">{admin?.email || '---'}</p>
-                                                </td>
-                                                <td className="px-6 py-5 text-center">
-                                                    <span className={clsx(
-                                                        "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm",
-                                                        s.License?.type === 'trial' ? 'bg-amber-100 text-amber-700' :
-                                                            s.License?.type?.includes('premium') ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                                                    )}>
-                                                        {s.License?.type || 'N/A'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-5 text-center">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <div className={clsx("w-2 h-2 rounded-full", s.License?.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500')} />
-                                                        <span className={clsx("text-xs font-black uppercase", s.License?.status === 'active' ? 'text-emerald-600' : 'text-red-600')}>
-                                                            {s.License?.status === 'active' ? 'ATIVO' : 'SUSPENSO'}
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <p className="text-sm font-bold text-gray-700">{admin?.name || '---'}</p>
+                                                        <p className="text-xs text-gray-400 font-medium">{admin?.email || '---'}</p>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <span className={clsx(
+                                                            "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm",
+                                                            s.License?.type === 'trial' ? 'bg-amber-100 text-amber-700' :
+                                                                s.License?.type?.includes('premium') ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                                                        )}>
+                                                            {s.License?.type || 'N/A'}
                                                         </span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-5">
-                                                    <div className="flex justify-end gap-2 outline-none">
-                                                        <button
-                                                            onClick={() => handleImpersonate(s.id)}
-                                                            className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all"
-                                                            title="Entrar no Salão"
-                                                        >
-                                                            <Store size={18} />
-                                                        </button>
-                                                        <select
-                                                            onChange={(e) => {
-                                                                const val = e.target.value;
-                                                                if (val === 'suspend') handleUpdateLicense(s.id, { status: 'suspended' });
-                                                                else if (val === 'active') handleUpdateLicense(s.id, { status: 'active' });
-                                                                else handleUpdateLicense(s.id, { type: val, status: 'active', validUntil: DateTime.now().plus({ months: 1 }).toJSDate() });
-                                                            }}
-                                                            defaultValue=""
-                                                            className="text-xs font-bold border-gray-100 rounded-xl bg-gray-50 focus:ring-2 focus:ring-purple-600/20"
-                                                        >
-                                                            <option value="" disabled>Ações</option>
-                                                            <option value="active">Ativar Acesso</option>
-                                                            <option value="standard_month">Mover p/ Standard</option>
-                                                            <option value="gold_month">Mover p/ Gold</option>
-                                                            <option value="premium_month">Mover p/ Premium</option>
-                                                            <option value="suspend" className="text-red-600 uppercase font-black">BLOQUEAR</option>
-                                                        </select>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <div className={clsx("w-2 h-2 rounded-full", isActive ? 'bg-emerald-500 animate-pulse' : 'bg-red-500')} />
+                                                            <span className={clsx("text-xs font-black uppercase", isActive ? 'text-emerald-600' : 'text-red-600')}>
+                                                                {isActive ? 'ATIVO' : 'BLOQUEADO'}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <div className="flex justify-end gap-2">
+                                                            {isActive ? (
+                                                                <button
+                                                                    onClick={() => handleUpdateLicense(s.id, { status: 'suspended' })}
+                                                                    className="px-4 py-2 bg-red-100 text-red-700 rounded-xl font-bold text-xs hover:bg-red-200 transition-colors"
+                                                                >
+                                                                    Desativar
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => handleUpdateLicense(s.id, { status: 'active' })}
+                                                                    className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl font-bold text-xs hover:bg-emerald-200 transition-colors"
+                                                                >
+                                                                    Ativar
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
 
@@ -259,7 +255,12 @@ export default function SuperAdminPage() {
                                 </div>
                             </div>
                     )}
-
+                            {activeTab === 'emails' && (
+                                <div className="space-y-8 animate-in fade-in duration-500">
+                                    <h2 className="text-3xl font-black text-gray-900 tracking-tighter">Gestão de Emails</h2>
+                                    <SuperAdminEmails />
+                                </div>
+                            )}
                             {activeTab === 'communications' && (
                                 <div className="space-y-8 animate-in fade-in duration-500">
                                     <h2 className="text-3xl font-black text-gray-900 tracking-tighter">Central de Comunicação</h2>
