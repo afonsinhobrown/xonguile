@@ -14,7 +14,21 @@ export default function SuperAdminTickets() {
 
     useEffect(() => {
         loadTickets();
+        // Auto-refresh tickets a cada 5 segundos
+        const interval = setInterval(loadTickets, 5000);
+        return () => clearInterval(interval);
     }, [filter]);
+
+    // Auto-refresh do ticket selecionado a cada 2 segundos
+    useEffect(() => {
+        if (!selectedTicket) return;
+        const interval = setInterval(async () => {
+            const data = await api.getSuperTickets?.() || [];
+            const updated = data.find((t: any) => t.id === selectedTicket.id);
+            if (updated) setSelectedTicket(updated);
+        }, 2000);
+        return () => clearInterval(interval);
+    }, [selectedTicket?.id]);
 
     const loadTickets = async () => {
         setLoading(true);
@@ -36,11 +50,13 @@ export default function SuperAdminTickets() {
         if (!replyText.trim() || !selectedTicket) return;
         setSending(true);
         try {
-            // Add reply endpoint
             await api.addTicketReply?.(selectedTicket.id, { message: replyText });
             setReplyText('');
+            // Recarrega imediatamente o ticket para mostrar a nova mensagem
+            const data = await api.getSuperTickets?.() || [];
+            const updated = data.find((t: any) => t.id === selectedTicket.id);
+            if (updated) setSelectedTicket(updated);
             loadTickets();
-            setSelectedTicket(null);
         } catch (e) {
             alert('Erro ao enviar resposta');
         } finally {
