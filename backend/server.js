@@ -73,7 +73,7 @@ const authenticate = async (req, res, next) => {
     }
 
     req.user = user;
-    req.salonId = user.SalonId;
+    req.salonId = user.Salon?.id || user.SalonId;
     next();
 };
 
@@ -216,6 +216,27 @@ app.post('/public/book-appointment', async (req, res) => {
         res.json(result);
     } catch (e) {
         console.error('SERVER CRASH PREVENTED:', e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+// Get client's appointments (PUBLIC - for booking confirmation page)
+app.get('/public/client-appointments/:clientId', async (req, res) => {
+    try {
+        const { clientId } = req.params;
+        const appointments = await Appointment.findAll({
+            where: { ClientId: clientId },
+            include: [
+                { model: Client },
+                { model: Service },
+                { model: Professional },
+                { model: Salon }
+            ],
+            order: [['date', 'DESC']]
+        });
+        res.json(appointments);
+    } catch (e) {
+        console.error(e);
         res.status(400).json({ error: e.message });
     }
 });

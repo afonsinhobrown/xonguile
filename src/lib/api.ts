@@ -147,6 +147,7 @@ export const api = {
         body: JSON.stringify(data),
         headers: { 'Content-Type': 'application/json' }
     }).then(handleResponse),
+    publicClientAppointments: async (clientId: number) => fetch(`${API_URL}/public/client-appointments/${clientId}`).then(handleResponse).catch(() => []),
 
     // Subscriptions
     activateSubscription: async (salonId: number, type: string) => fetch(`${API_URL}/subscription/activate`, {
