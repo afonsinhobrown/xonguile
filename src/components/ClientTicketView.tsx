@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { MessageCircle, Send, Phone, AlertCircle } from 'lucide-react';
 import { Button } from './ui/Button';
+import VoiceCall from './VoiceCall';
 
 export default function ClientTicketView() {
     const user = JSON.parse(localStorage.getItem('salao_user') || '{}');
@@ -80,11 +81,10 @@ export default function ClientTicketView() {
                             <button
                                 key={ticket.id}
                                 onClick={() => setSelectedTicket(ticket)}
-                                className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                                    selectedTicket?.id === ticket.id
-                                        ? 'border-purple-600 bg-purple-50'
-                                        : 'border-gray-200 hover:border-purple-300 bg-white'
-                                }`}
+                                className={`w-full text-left p-4 rounded-xl border-2 transition-all ${selectedTicket?.id === ticket.id
+                                    ? 'border-purple-600 bg-purple-50'
+                                    : 'border-gray-200 hover:border-purple-300 bg-white'
+                                    }`}
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="flex-1">
@@ -117,16 +117,21 @@ export default function ClientTicketView() {
                             </p>
                         </div>
 
+                        {/* Voice Call Component */}
+                        <VoiceCall
+                            contactId={user.salonId || ''}
+                            contactName="Salão"
+                        />
+
                         {/* Messages */}
                         <div className="flex-1 space-y-3 overflow-y-auto mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200 max-h-[400px]">
                             {selectedTicket.Messages && selectedTicket.Messages.length > 0 ? (
                                 selectedTicket.Messages.map((msg: any, idx: number) => (
                                     <div key={idx} className={`flex ${msg.isAdmin ? 'justify-start' : 'justify-end'}`}>
-                                        <div className={`max-w-xs p-3 rounded-lg ${
-                                            msg.isAdmin
-                                                ? 'bg-purple-100 text-gray-900 rounded-tl-none'
-                                                : 'bg-gray-200 text-gray-900 rounded-tr-none'
-                                        }`}>
+                                        <div className={`max-w-xs p-3 rounded-lg ${msg.isAdmin
+                                            ? 'bg-purple-100 text-gray-900 rounded-tl-none'
+                                            : 'bg-gray-200 text-gray-900 rounded-tr-none'
+                                            }`}>
                                             <p className="text-xs font-bold text-gray-600 mb-1">
                                                 {msg.isAdmin ? '🏢 Salão' : '👤 Você'}
                                             </p>
