@@ -3,13 +3,14 @@ import { api } from '../lib/api';
 import {
     MessageCircle, Send, Clock, CheckCircle,
     AlertCircle, Search, Plus, User, Building,
-    Shield, MessageSquare
+    Shield, MessageSquare, Phone, X
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { clsx } from 'clsx';
 import { DateTime } from 'luxon';
+import VoiceCall from '../components/VoiceCall';
 
 export default function SupportPage() {
     const [tickets, setTickets] = useState<any[]>([]);
@@ -17,6 +18,7 @@ export default function SupportPage() {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
+    const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
     const user = JSON.parse(localStorage.getItem('salao_user') || '{}');
     const isSuper = user.role?.startsWith('super_');
 
@@ -152,6 +154,17 @@ export default function SupportPage() {
 
                 {/* Chat Area */}
                 <div className="flex-1 flex flex-col bg-white relative">
+                    {isVoiceCallOpen && selectedTicket && (
+                        <div className="absolute top-20 right-4 z-50 bg-white rounded-2xl shadow-2xl p-6 border border-gray-200 w-80">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-black text-gray-800 text-sm">Chamada de Voz</h3>
+                                <button onClick={() => setIsVoiceCallOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                                    <X size={18} />
+                                </button>
+                            </div>
+                            <VoiceCall contactId={`super_admin_${Math.random().toString(36).substr(2, 9)}`} contactName="Super Administrador" />
+                        </div>
+                    )}
                     {selectedTicket ? (
                         <>
                             <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white z-10">
@@ -167,6 +180,16 @@ export default function SupportPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
+                                    {!isSuper && (
+                                        <Button 
+                                            onClick={() => setIsVoiceCallOpen(true)}
+                                            className="text-blue-600 border-blue-100 hover:bg-blue-50 text-xs py-2 h-auto font-bold flex items-center gap-2"
+                                            variant="secondary"
+                                        >
+                                            <Phone size={16} />
+                                            Chamada de Voz
+                                        </Button>
+                                    )}
                                     {isSuper && selectedTicket.status !== 'resolved' && (
                                         <Button variant="secondary" className="text-emerald-600 border-emerald-100 hover:bg-emerald-50 text-xs py-2 h-auto" onClick={() => {/* Resolve API call */ }}>
                                             Marcar como Resolvido
