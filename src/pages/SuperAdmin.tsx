@@ -18,6 +18,27 @@ export default function SuperAdminPage() {
     const user = JSON.parse(localStorage.getItem('salao_user') || '{}');
     const isSuper = user.role?.startsWith('super_');
 
+    const loadData = async () => {
+        if (!isSuper) return; // Safety
+        setLoading(true);
+        try {
+            const [salonsData, statsData] = await Promise.all([
+                api.getSuperSalons(),
+                api.getSuperStats()
+            ]);
+            setSalons(Array.isArray(salonsData) ? salonsData : []);
+            setStats(statsData);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
     if (!isSuper) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-10">
@@ -31,25 +52,6 @@ export default function SuperAdminPage() {
         );
     }
 
-    const loadData = async () => {
-        setLoading(true);
-        try {
-            const [salonsData, statsData] = await Promise.all([
-                api.getSuperSalons(),
-                api.getSuperStats()
-            ]);
-            setSalons(salonsData);
-            setStats(statsData);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadData();
-    }, []);
 
     const handleUpdateLicense = async (salonId: number, data: any) => {
         if (!confirm('Deseja atualizar esta licença?')) return;
@@ -369,56 +371,49 @@ export default function SuperAdminPage() {
                                     </div>
                                 </div>
                             )}
-                        </>
-                    )}
-                </div>
-            );
+                        </div>
+                    );
 }
 
-        </div>
-            </div >
-    );
-}
-
-function QuickTemplate({ title, desc, onClick }: any) {
+                    function QuickTemplate({title, desc, onClick}: any) {
     return (
-        <button
-            onClick={onClick}
-            className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-purple-300 hover:bg-purple-50 transition-all group text-left"
-        >
-            <div>
-                <p className="text-sm font-black text-gray-800">{title}</p>
-                <p className="text-[10px] text-gray-400 font-medium">{desc}</p>
-            </div>
-            <ArrowRight size={16} className="text-gray-300 group-hover:text-purple-600 transition-colors" />
-        </button>
-    );
+                    <button
+                        onClick={onClick}
+                        className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-purple-300 hover:bg-purple-50 transition-all group text-left"
+                    >
+                        <div>
+                            <p className="text-sm font-black text-gray-800">{title}</p>
+                            <p className="text-[10px] text-gray-400 font-medium">{desc}</p>
+                        </div>
+                        <ArrowRight size={16} className="text-gray-300 group-hover:text-purple-600 transition-colors" />
+                    </button>
+                    );
 }
 
-function TabBtn({ active, onClick, label }: any) {
+                    function TabBtn({active, onClick, label}: any) {
     return (
-        <button
-            onClick={onClick}
-            className={clsx(
-                "px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
-                active ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30" : "text-gray-400 hover:text-gray-600"
-            )}
-        >
-            {label}
-        </button>
-    );
+                    <button
+                        onClick={onClick}
+                        className={clsx(
+                            "px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                            active ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30" : "text-gray-400 hover:text-gray-600"
+                        )}
+                    >
+                        {label}
+                    </button>
+                    );
 }
 
-function StatCard({ icon, label, value }: any) {
+                    function StatCard({icon, label, value}: any) {
     return (
-        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-5">
-            <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-2xl shadow-inner">
-                {icon}
-            </div>
-            <div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{label}</p>
-                <p className="text-xl font-black text-gray-900 tracking-tight">{value}</p>
-            </div>
-        </div>
-    );
+                    <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-5">
+                        <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-2xl shadow-inner">
+                            {icon}
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{label}</p>
+                            <p className="text-xl font-black text-gray-900 tracking-tight">{value}</p>
+                        </div>
+                    </div>
+                    );
 }

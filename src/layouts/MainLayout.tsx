@@ -1,4 +1,5 @@
-Calendar as CalendarIcon,
+import {
+    Calendar as CalendarIcon,
     LayoutDashboard,
     Users as UsersIcon,
     Scissors,

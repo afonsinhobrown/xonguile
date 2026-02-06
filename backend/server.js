@@ -52,7 +52,12 @@ const authenticate = async (req, res, next) => {
         user = await User.findByPk(userId, { include: [{ model: Salon, include: [License] }] });
     }
 
-    if (!user) return res.status(401).json({ error: 'Não autenticado' });
+    if (!user) {
+        console.log(`[AUTH] Failed to find user for userId:${userId} token:${token}`);
+        return res.status(401).json({ error: 'Não autenticado' });
+    }
+
+    console.log(`[AUTH] User Authenticated: ${user.email} (Role: ${user.role})`);
 
     // Check License (Exclude Super Users)
     if (!['super_level_1', 'super_level_2'].includes(user.role)) {
@@ -303,7 +308,10 @@ app.post('/login', async (req, res) => {
 
 // 1. Get all salons with license and admin info
 app.get('/admin/salons', async (req, res) => {
-    if (!['super_level_1', 'super_level_2'].includes(req.user.role)) return res.status(403).json({ error: 'Acesso negado' });
+    if (!['super_level_1', 'super_level_2'].includes(req.user.role)) {
+        console.log(`[403] Access Denied to /admin/salons. User role: ${req.user.role}`);
+        return res.status(403).json({ error: 'Acesso negado' });
+    }
     const salons = await Salon.findAll({
         include: [
             License,

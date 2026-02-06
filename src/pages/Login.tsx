@@ -53,6 +53,8 @@ const handleLogin = async (e: React.FormEvent) => {
         localStorage.setItem('salao_user', JSON.stringify(user));
 
         if (user.role?.startsWith('super_')) {
+            // Also set token for super admins so they can impersonate/access global stats
+            localStorage.setItem('salon_token', 'XONGUILE-ADMIN-MASTER-TOKEN');
             navigate('/admin/super');
         } else {
             navigate('/admin');
