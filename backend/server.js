@@ -338,8 +338,8 @@ app.post('/admin/salons/:id/impersonate', async (req, res) => {
 app.get('/admin/stats', async (req, res) => {
     if (!['super_level_1', 'super_level_2'].includes(req.user.role)) return res.status(403).json({ error: 'Acesso negado' });
 
-    const licenseRevenue = await Transaction.sum('amount', { where: { type: 'license_payment' } }) || 0;
-    const totalGmv = await Transaction.sum('amount', { where: { type: 'income' } }) || 0;
+    const licenseRevenue = (await Transaction.sum('amount', { where: { type: 'license_payment' } })) || 0;
+    const totalGmv = (await Transaction.sum('amount', { where: { type: 'income' } })) || 0;
     const totalSalons = await Salon.count();
     const activeSalons = await License.count({ where: { status: 'active' } });
 
@@ -549,8 +549,9 @@ app.post('/subscription/activate', async (req, res) => {
 });
 
 // --- SERVER START & BOOTSTRAP ---
-app.listen(PORT, async () => {
-    console.log(`XONGUILE BUSINESS SERVER RUNNING ON PORT ${PORT}`);
+const START_PORT = process.env.PORT || 3001;
+app.listen(START_PORT, async () => {
+    console.log(`🚀 XONGUILE SERVER RUNNING ON PORT ${START_PORT}`);
     try {
         await sequelize.sync();
         console.log('Database Synced.');
@@ -595,7 +596,4 @@ app.listen(PORT, async () => {
     }
 });
 
-const PORT_FINAL = process.env.PORT || 3001;
-app.listen(PORT_FINAL, () => {
-    console.log(`🚀 SERVIDOR RODANDO NA PORTA ${PORT_FINAL}`);
-});
+// Server already started above with database sync

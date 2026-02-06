@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import {
     Users, Store, CreditCard, Shield, Plus,
-    CheckCircle, XCircle, MoreVertical, Edit, Search, UserPlus
+    CheckCircle, XCircle, MoreVertical, Edit, Search, UserPlus, Banknote
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';

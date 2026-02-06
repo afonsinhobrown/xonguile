@@ -110,7 +110,7 @@ const Appointment = sequelize.define('Appointment', {
 const Transaction = sequelize.define('Transaction', {
     description: DataTypes.STRING,
     amount: DataTypes.FLOAT,
-    type: { type: DataTypes.ENUM('income', 'expense'), allowNull: false },
+    type: { type: DataTypes.ENUM('income', 'expense', 'license_payment'), allowNull: false },
     category: DataTypes.STRING,
     paymentMethod: DataTypes.STRING,
     date: DataTypes.DATE
