@@ -27,7 +27,7 @@ export default function SuperAdminPage() {
                 api.getSuperStats()
             ]);
             setSalons(Array.isArray(salonsData) ? salonsData : []);
-            setStats(statsData);
+            setStats(statsData || null);
         } catch (e) {
             console.error(e);
         } finally {

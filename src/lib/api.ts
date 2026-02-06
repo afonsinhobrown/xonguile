@@ -104,7 +104,7 @@ export const api = {
     deleteUser: async (id: number) => fetch(`${API_URL}/users/${id}`, { method: 'DELETE', headers: getHeaders() }).then(handleResponse),
 
     // Platform Admin
-    getSuperStats: async () => fetch(`${API_URL}/admin/stats`, { headers: getHeaders() }).then(handleResponse),
+    getSuperStats: async () => fetch(`${API_URL}/admin/stats`, { headers: getHeaders() }).then(handleResponse).catch(() => null),
     getSuperSalons: async () => fetch(`${API_URL}/admin/salons`, { headers: getHeaders() }).then(handleResponse).catch(() => []),
     updateSuperLicense: async (id: number, data: any) => fetch(`${API_URL}/admin/salons/${id}/license`, {
         method: 'PUT', body: JSON.stringify(data), headers: getHeaders()
