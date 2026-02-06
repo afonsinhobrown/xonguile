@@ -671,7 +671,35 @@ app.post('/admin/tickets/:id/reply', async (req, res) => {
         UserId: req.user.id,
         TicketId: req.params.id
     });
+    // Update ticket status
+    await Ticket.update({ status: 'replied' }, { where: { id: req.params.id } });
     res.json(msg);
+});
+
+// Get unread tickets count (for notifications)
+app.get('/admin/unread-tickets', async (req, res) => {
+    if (!['super_level_1', 'super_level_2', 'admin'].includes(req.user.role)) {
+        return res.status(403).json({ error: 'Acesso negado' });
+    }
+    const count = await Ticket.count({ where: { status: 'open' } });
+    res.json({ unreadCount: count });
+});
+
+// Get client's unread messages count
+app.get('/public/unread-messages/:clientId', async (req, res) => {
+    try {
+        const { clientId } = req.params;
+        const messages = await Message.findAll({
+            include: [{
+                model: Ticket,
+                where: { ClientId: clientId }
+            }],
+            where: { isRead: false }
+        });
+        res.json({ unreadCount: messages.length });
+    } catch (e) {
+        res.json({ unreadCount: 0 });
+    }
 });
 
 // --- SUBSCRIPTION & PAYPAL ---

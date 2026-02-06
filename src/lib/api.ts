@@ -169,4 +169,6 @@ export const api = {
     addTicketReply: async (ticketId: number, data: any) => fetch(`${API_URL}/admin/tickets/${ticketId}/reply`, {
         method: 'POST', body: JSON.stringify(data), headers: getHeaders()
     }).then(handleResponse),
+    getUnreadTickets: async () => fetch(`${API_URL}/admin/unread-tickets`, { headers: getHeaders() }).then(handleResponse).catch(() => ({ unreadCount: 0 })),
+    getUnreadMessages: async (clientId: number) => fetch(`${API_URL}/public/unread-messages/${clientId}`).then(handleResponse).catch(() => ({ unreadCount: 0 })),
 };

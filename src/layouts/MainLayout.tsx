@@ -18,6 +18,7 @@ import {
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { useState } from 'react';
+import NotificationCenter from '../components/NotificationCenter';
 
 export function MainLayout() {
     // SECURITY HELPER: Fetch user data reliably
@@ -131,6 +132,7 @@ export function MainLayout() {
 
             {/* --- Main Area --- */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-gray-50 relative pb-16 md:pb-0">
+                <NotificationCenter />
                 {!isSuper && isTrial && (
                     <div className="bg-gradient-to-r from-orange-600 to-amber-600 text-white px-4 py-3 text-center text-xs font-bold shadow-lg flex items-center justify-center gap-3 animate-pulse">
                         <Sparkles size={16} className="text-yellow-300" />

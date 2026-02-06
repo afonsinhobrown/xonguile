@@ -57,11 +57,10 @@ export default function SuperAdminTickets() {
                         <button
                             key={f}
                             onClick={() => setFilter(f as any)}
-                            className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${
-                                filter === f
+                            className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${filter === f
                                     ? 'bg-purple-600 text-white'
                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
+                                }`}
                         >
                             {f === 'open' ? 'Abertos' : f === 'closed' ? 'Fechados' : 'Todos'}
                         </button>
@@ -78,11 +77,10 @@ export default function SuperAdminTickets() {
                             <button
                                 key={ticket.id}
                                 onClick={() => setSelectedTicket(ticket)}
-                                className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                                    selectedTicket?.id === ticket.id
+                                className={`w-full text-left p-4 rounded-xl border-2 transition-all ${selectedTicket?.id === ticket.id
                                         ? 'border-purple-600 bg-purple-50'
                                         : 'border-gray-200 hover:border-purple-300'
-                                }`}
+                                    }`}
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="flex-1">
@@ -92,11 +90,10 @@ export default function SuperAdminTickets() {
                                             {new Date(ticket.createdAt).toLocaleDateString('pt-PT')}
                                         </p>
                                     </div>
-                                    <div className={`px-2 py-1 rounded text-xs font-bold ${
-                                        ticket.status === 'open'
+                                    <div className={`px-2 py-1 rounded text-xs font-bold ${ticket.status === 'open'
                                             ? 'bg-yellow-100 text-yellow-700'
                                             : 'bg-green-100 text-green-700'
-                                    }`}>
+                                        }`}>
                                         {ticket.status === 'open' ? 'Aberto' : 'Fechado'}
                                     </div>
                                 </div>
@@ -125,9 +122,8 @@ export default function SuperAdminTickets() {
                         <div className="space-y-3 max-h-[300px] overflow-y-auto bg-gray-50 p-4 rounded-xl border border-gray-200">
                             {selectedTicket.Messages && selectedTicket.Messages.length > 0 ? (
                                 selectedTicket.Messages.map((msg: any, idx: number) => (
-                                    <div key={idx} className={`p-3 rounded-lg ${
-                                        msg.isAdmin ? 'bg-purple-100 ml-8' : 'bg-white mr-8 border border-gray-200'
-                                    }`}>
+                                    <div key={idx} className={`p-3 rounded-lg ${msg.isAdmin ? 'bg-purple-100 ml-8' : 'bg-white mr-8 border border-gray-200'
+                                        }`}>
                                         <p className="text-xs font-bold text-gray-600 mb-1">
                                             {msg.isAdmin ? 'Super Admin' : 'Cliente'}
                                         </p>
