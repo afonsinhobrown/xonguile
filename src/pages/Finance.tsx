@@ -3,7 +3,7 @@ import { api } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
-import { Plus, TrendingUp, TrendingDown, DollarSign, BarChart3, PieChart, FileText, Sparkles, Lock } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, BarChart3, PieChart, FileText, Sparkles, Lock, Users } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';

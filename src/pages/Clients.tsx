@@ -3,7 +3,8 @@ import { api } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
-import { Plus, Search, User, Phone, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, User, Phone, Edit, Trash2, CreditCard } from 'lucide-react';
+import { XonguileCard } from '../components/clients/XonguileCard';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,6 +23,7 @@ export default function ClientsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [clients, setClients] = useState<any[]>([]);
+    const [selectedClientForCard, setSelectedClientForCard] = useState<any>(null);
 
     const loadClients = async () => {
         const data = await api.getClients();
@@ -112,6 +114,13 @@ export default function ClientsPage() {
                                     <Edit size={16} />
                                 </button>
                                 <button
+                                    onClick={() => setSelectedClientForCard(client)}
+                                    className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                    title="Ver Cartão Xonguile"
+                                >
+                                    <CreditCard size={16} />
+                                </button>
+                                <button
                                     onClick={() => client.id && handleDelete(client.id)}
                                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                 >
@@ -173,6 +182,13 @@ export default function ClientsPage() {
                 </form>
             </Modal>
 
+            {selectedClientForCard && (
+                <XonguileCard
+                    name={selectedClientForCard.name}
+                    xonguileId={selectedClientForCard.xonguileId}
+                    onClose={() => setSelectedClientForCard(null)}
+                />
+            )}
         </div>
     );
 }

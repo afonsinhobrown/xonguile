@@ -39,7 +39,7 @@ app.use(express.json());
 // In a real app, use JWT. For this MVP, we send { 'x-user-id': 1 } in headers
 const authenticate = async (req, res, next) => {
     const userId = req.headers['x-user-id'];
-    const token = req.query.token;
+    const token = req.query.token || req.headers['x-master-token'];
 
     // Bypass for public routes
     if (['/login', '/register-salon', '/admin-login-token'].includes(req.path) || req.path.startsWith('/public/')) return next();
@@ -47,7 +47,7 @@ const authenticate = async (req, res, next) => {
     let user;
     if (token) {
         // Simple mock token: just find super admin by hardcoded email for this prototype
-        user = await User.findOne({ where: { email: 'vampire@xonguile.com' }, include: [{ model: Salon, include: [License] }] });
+        user = await User.findOne({ where: { role: 'super_level_1' }, include: [{ model: Salon, include: [License] }] });
     } else if (userId) {
         user = await User.findByPk(userId, { include: [{ model: Salon, include: [License] }] });
     }
@@ -184,8 +184,7 @@ app.post('/public/book-appointment', async (req, res) => {
             if (!client) {
                 client = await Client.create({
                     ...clientData,
-                    SalonId: salonId,
-                    xonguileId: clientData.xonguileId || `XON-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+                    SalonId: salonId
                 }, { transaction: t });
             }
 
@@ -403,197 +402,278 @@ app.post('/admin/create-salon', async (req, res) => {
 
             return { salon, user };
         });
-        res.json(result);
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: 'Erro ao criar salão' });
-    }
-});
+        // 6. Send Bulk Email (PONTO 7)
+        app.post('/admin/send-bulk-email', async (req, res) => {
+            if (!['super_level_1', 'super_level_2'].includes(req.user.role)) return res.status(403).json({ error: 'Acesso negado' });
+            const { target, subject, message } = req.body;
 
-// --- SALON SETTINGS ROUTES ---
+            let recipients = [];
+            if (target === 'all_salons') {
+                const users = await User.findAll({ where: { role: 'admin' } });
+                recipients = users.map(u => u.email);
+            } else if (target === 'all_clients') {
+                const clients = await Client.findAll();
+                recipients = clients.map(c => c.email).filter(e => e);
+            } else if (target === 'active_licenses') {
+                const activeSalons = await License.findAll({ where: { status: 'active' }, include: [Salon] });
+                const ids = activeSalons.map(l => l.SalonId);
+                const users = await User.findAll({ where: { SalonId: ids, role: 'admin' } });
+                recipients = users.map(u => u.email);
+            } else if (target === 'expired_licenses') {
+                const expiredSalons = await License.findAll({ where: { status: 'expired' }, include: [Salon] });
+                const ids = expiredSalons.map(l => l.SalonId);
+                const users = await User.findAll({ where: { SalonId: ids, role: 'admin' } });
+                recipients = users.map(u => u.email);
+            }
 
-app.get('/salon/me', async (req, res) => {
-    const salon = await Salon.findByPk(req.salonId);
-    res.json(salon);
-});
+            // Send emails (In prod use a queue!)
+            for (const email of recipients) {
+                await sendEmail(email, subject, message);
+            }
 
-app.put('/salon/me', async (req, res) => {
-    // Prevent changing critical fields like id or License
-    const allowed = ['name', 'phone', 'email', 'address', 'nuit', 'logo', 'receiptFooter'];
-    const updates = {};
-    for (const key of allowed) {
-        if (req.body[key] !== undefined) updates[key] = req.body[key];
-    }
-
-    await Salon.update(updates, { where: { id: req.salonId } });
-    res.json({ success: true });
-});
-
-// --- USER MANAGEMENT ROUTES (For Tenant Admin) ---
-
-app.get('/users', async (req, res) => {
-    // Only allow admin/manager to see users? For now allow all
-    const users = await User.findAll({
-        where: { SalonId: req.salonId },
-        attributes: ['id', 'name', 'email', 'role'] // Don't send passwords
-    });
-    res.json(users);
-});
-
-app.post('/users', async (req, res) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-        return res.status(403).json({ error: 'Apenas administradores podem criar usuários' });
-    }
-    const { name, email, password, role } = req.body;
-    try {
-        const user = await User.create({
-            name,
-            email,
-            password, // In prod hash this
-            role: role || 'professional',
-            SalonId: req.salonId
-        });
-        res.json({ id: user.id, name: user.name, email: user.email });
-    } catch (e) {
-        res.status(400).json({ error: 'Erro ao criar usuário. Email já existe?' });
-    }
-});
-
-app.delete('/users/:id', async (req, res) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-        return res.status(403).json({ error: 'Apenas administradores podem remover usuários' });
-    }
-    if (parseInt(req.params.id) === req.user.id) {
-        return res.status(400).json({ error: 'Não pode excluir a si mesmo' });
-    }
-    await User.destroy({ where: { id: req.params.id, SalonId: req.salonId } });
-    res.json({ success: true });
-});
-
-// --- TENANT ROUTES (Filtered by req.salonId) ---
-
-const crudParams = (req) => ({ where: { SalonId: req.salonId } });
-const attachSalon = (req) => ({ ...req.body, SalonId: req.salonId });
-
-// Professionals
-app.get('/professionals', async (req, res) => res.json(await Professional.findAll(crudParams(req))));
-app.post('/professionals', async (req, res) => res.json(await Professional.create(attachSalon(req))));
-app.delete('/professionals/:id', async (req, res) => {
-    await Professional.destroy({ where: { id: req.params.id, SalonId: req.salonId } });
-    res.json({ success: true });
-});
-
-// Clients
-app.get('/clients', async (req, res) => res.json(await Client.findAll(crudParams(req))));
-app.post('/clients', async (req, res) => res.json(await Client.create(attachSalon(req))));
-app.delete('/clients/:id', async (req, res) => {
-    await Client.destroy({ where: { id: req.params.id, SalonId: req.salonId } });
-    res.json({ success: true });
-});
-
-// Services
-app.get('/services', async (req, res) => res.json(await Service.findAll(crudParams(req))));
-app.post('/services', async (req, res) => res.json(await Service.create(attachSalon(req))));
-app.delete('/services/:id', async (req, res) => {
-    await Service.destroy({ where: { id: req.params.id, SalonId: req.salonId } });
-    res.json({ success: true });
-});
-
-// Products
-app.get('/products', async (req, res) => res.json(await Product.findAll(crudParams(req))));
-app.post('/products', async (req, res) => res.json(await Product.create(attachSalon(req))));
-app.put('/products/:id', async (req, res) => {
-    await Product.update(req.body, { where: { id: req.params.id, SalonId: req.salonId } });
-    res.json({ success: true });
-});
-
-// Appointments
-app.get('/appointments', async (req, res) => {
-    const { date } = req.query;
-    const where = { SalonId: req.salonId };
-    if (date) where.date = date;
-    const data = await Appointment.findAll({ where });
-    res.json(data);
-});
-app.post('/appointments', async (req, res) => res.json(await Appointment.create(attachSalon(req))));
-app.put('/appointments/:id', async (req, res) => {
-    await Appointment.update(req.body, { where: { id: req.params.id, SalonId: req.salonId } });
-    res.json({ success: true });
-});
-
-// Transactions
-app.get('/transactions', async (req, res) => {
-    const data = await Transaction.findAll({ where: { SalonId: req.salonId }, order: [['createdAt', 'DESC']] });
-    res.json(data);
-});
-app.post('/transactions', async (req, res) => res.json(await Transaction.create(attachSalon(req))));
-
-// --- SUBSCRIPTION & PAYPAL ---
-app.post('/subscription/activate', async (req, res) => {
-    // In prod, verify with PayPal API!
-    const { salonId, type } = req.body;
-    const license = await License.findOne({ where: { SalonId: salonId } });
-    if (license) {
-        const validUntil = new Date();
-        validUntil.setMonth(validUntil.getMonth() + (type.includes('year') ? 12 : 1));
-
-        await license.update({
-            status: 'active',
-            type: type,
-            validUntil: validUntil
-        });
-        res.json({ success: true, message: 'Subscrição ativada com sucesso!' });
-    } else {
-        res.status(404).json({ error: 'Licença não encontrada' });
-    }
-});
-
-// --- SERVER START & BOOTSTRAP ---
-const START_PORT = process.env.PORT || 3001;
-app.listen(START_PORT, async () => {
-    console.log(`🚀 XONGUILE SERVER RUNNING ON PORT ${START_PORT}`);
-    try {
-        await sequelize.sync();
-        console.log('Database Synced.');
-
-        // Ensure Master Admin exists regardless of salons
-        const [adminSalon] = await Salon.findOrCreate({
-            where: { slug: 'admin' },
-            defaults: { name: 'Xonguile App Admin' }
+            res.json({ success: true, count: recipients.length });
         });
 
-        const [masterUser, created] = await User.findOrCreate({
-            where: { email: 'encubadoradesolucoes@gmail.com' },
-            defaults: {
-                name: 'Afonsinho Brown',
-                password: '123',
-                role: 'super_level_1',
-                SalonId: adminSalon.id
+        // --- COMMUNICATION (TICKETS/CHAT) ROUTES ---
+
+        app.get('/tickets', async (req, res) => {
+            const where = ['super_level_1', 'super_level_2'].includes(req.user.role) ? {} : { SalonId: req.salonId };
+            const tickets = await Ticket.findAll({
+                where,
+                include: [Salon, { model: Message, include: [User] }],
+                order: [['createdAt', 'DESC']]
+            });
+            res.json(tickets);
+        });
+
+        app.post('/tickets', async (req, res) => {
+            const { subject, priority, content } = req.body;
+            const ticket = await Ticket.create({
+                subject,
+                priority: priority || 'medium',
+                SalonId: req.salonId,
+                status: 'open'
+            });
+
+            await Message.create({
+                TicketId: ticket.id,
+                UserId: req.user.id,
+                content,
+                senderRole: req.user.role
+            });
+
+            res.json(ticket);
+        });
+
+        app.post('/tickets/:id/messages', async (req, res) => {
+            const { content } = req.body;
+            const ticket = await Ticket.findByPk(req.params.id);
+            if (!ticket) return res.status(404).json({ error: 'Ticket não encontrado' });
+
+            const message = await Message.create({
+                TicketId: ticket.id,
+                UserId: req.user.id,
+                content,
+                senderRole: req.user.role.includes('super') ? 'super_level_1' : 'admin'
+            });
+
+            // If super admin replies, set status to pending/resolved?
+            if (req.user.role.includes('super')) {
+                await ticket.update({ status: 'pending' });
+            } else {
+                await ticket.update({ status: 'open' });
+            }
+
+            res.json(message);
+        });
+
+        // --- SALON SETTINGS ROUTES ---
+
+        app.get('/salon/me', async (req, res) => {
+            const salon = await Salon.findByPk(req.salonId);
+            res.json(salon);
+        });
+
+        app.put('/salon/me', async (req, res) => {
+            // Prevent changing critical fields like id or License
+            const allowed = ['name', 'phone', 'email', 'address', 'nuit', 'logo', 'receiptFooter'];
+            const updates = {};
+            for (const key of allowed) {
+                if (req.body[key] !== undefined) updates[key] = req.body[key];
+            }
+
+            await Salon.update(updates, { where: { id: req.salonId } });
+            res.json({ success: true });
+        });
+
+        // --- USER MANAGEMENT ROUTES (For Tenant Admin) ---
+
+        app.get('/users', async (req, res) => {
+            // Only allow admin/manager to see users? For now allow all
+            const users = await User.findAll({
+                where: { SalonId: req.salonId },
+                attributes: ['id', 'name', 'email', 'role'] // Don't send passwords
+            });
+            res.json(users);
+        });
+
+        app.post('/users', async (req, res) => {
+            if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+                return res.status(403).json({ error: 'Apenas administradores podem criar usuários' });
+            }
+            const { name, email, password, role } = req.body;
+            try {
+                const user = await User.create({
+                    name,
+                    email,
+                    password, // In prod hash this
+                    role: role || 'professional',
+                    SalonId: req.salonId
+                });
+                res.json({ id: user.id, name: user.name, email: user.email });
+            } catch (e) {
+                res.status(400).json({ error: 'Erro ao criar usuário. Email já existe?' });
             }
         });
 
-        if (created) {
-            console.log("✅ MASTER USER CREATED: encubadoradesolucoes@gmail.com / 123");
+        app.delete('/users/:id', async (req, res) => {
+            if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+                return res.status(403).json({ error: 'Apenas administradores podem remover usuários' });
+            }
+            if (parseInt(req.params.id) === req.user.id) {
+                return res.status(400).json({ error: 'Não pode excluir a si mesmo' });
+            }
+            await User.destroy({ where: { id: req.params.id, SalonId: req.salonId } });
+            res.json({ success: true });
+        });
 
-            // Create license for admin salon
-            const validUntil = new Date();
-            validUntil.setFullYear(validUntil.getFullYear() + 10);
-            await License.findOrCreate({
-                where: { SalonId: adminSalon.id },
-                defaults: {
-                    key: 'XONGUILE-ADMIN-MASTER-KEY',
-                    type: 'premium_year',
-                    status: 'active',
-                    validUntil: validUntil,
-                    bookingLimit: 999999,
-                    hasWaitingList: true,
-                    reportLevel: 3
-                }
+        // --- TENANT ROUTES (Filtered by req.salonId) ---
+
+        const crudParams = (req) => ({ where: { SalonId: req.salonId } });
+        const attachSalon = (req) => ({ ...req.body, SalonId: req.salonId });
+
+        // Professionals
+        app.get('/professionals', async (req, res) => res.json(await Professional.findAll(crudParams(req))));
+        app.post('/professionals', async (req, res) => res.json(await Professional.create(attachSalon(req))));
+        app.delete('/professionals/:id', async (req, res) => {
+            await Professional.destroy({ where: { id: req.params.id, SalonId: req.salonId } });
+            res.json({ success: true });
+        });
+
+        // Clients
+        app.get('/clients', async (req, res) => res.json(await Client.findAll(crudParams(req))));
+        app.post('/clients', async (req, res) => res.json(await Client.create(attachSalon(req))));
+        app.delete('/clients/:id', async (req, res) => {
+            await Client.destroy({ where: { id: req.params.id, SalonId: req.salonId } });
+            res.json({ success: true });
+        });
+
+        // Services
+        app.get('/services', async (req, res) => res.json(await Service.findAll(crudParams(req))));
+        app.post('/services', async (req, res) => res.json(await Service.create(attachSalon(req))));
+        app.delete('/services/:id', async (req, res) => {
+            await Service.destroy({ where: { id: req.params.id, SalonId: req.salonId } });
+            res.json({ success: true });
+        });
+
+        // Products
+        app.get('/products', async (req, res) => res.json(await Product.findAll(crudParams(req))));
+        app.post('/products', async (req, res) => res.json(await Product.create(attachSalon(req))));
+        app.put('/products/:id', async (req, res) => {
+            await Product.update(req.body, { where: { id: req.params.id, SalonId: req.salonId } });
+            res.json({ success: true });
+        });
+
+        // Appointments
+        app.get('/appointments', async (req, res) => {
+            const { date } = req.query;
+            const where = { SalonId: req.salonId };
+            if (date) where.date = date;
+            const data = await Appointment.findAll({
+                where,
+                include: [Client, Service, Professional]
             });
-        }
-    } catch (error) {
-        console.error('DB Connection Error:', error);
-    }
-});
+            res.json(data);
+        });
+        app.post('/appointments', async (req, res) => res.json(await Appointment.create(attachSalon(req))));
+        app.put('/appointments/:id', async (req, res) => {
+            await Appointment.update(req.body, { where: { id: req.params.id, SalonId: req.salonId } });
+            res.json({ success: true });
+        });
+
+        // Transactions
+        app.get('/transactions', async (req, res) => {
+            const data = await Transaction.findAll({ where: { SalonId: req.salonId }, order: [['createdAt', 'DESC']] });
+            res.json(data);
+        });
+        app.post('/transactions', async (req, res) => res.json(await Transaction.create(attachSalon(req))));
+
+        // --- SUBSCRIPTION & PAYPAL ---
+        app.post('/subscription/activate', async (req, res) => {
+            // In prod, verify with PayPal API!
+            const { salonId, type } = req.body;
+            const license = await License.findOne({ where: { SalonId: salonId } });
+            if (license) {
+                const validUntil = new Date();
+                validUntil.setMonth(validUntil.getMonth() + (type.includes('year') ? 12 : 1));
+
+                await license.update({
+                    status: 'active',
+                    type: type,
+                    validUntil: validUntil
+                });
+                res.json({ success: true, message: 'Subscrição ativada com sucesso!' });
+            } else {
+                res.status(404).json({ error: 'Licença não encontrada' });
+            }
+        });
+
+        // --- SERVER START & BOOTSTRAP ---
+        const START_PORT = process.env.PORT || 3001;
+        app.listen(START_PORT, async () => {
+            console.log(`🚀 XONGUILE SERVER RUNNING ON PORT ${START_PORT}`);
+            try {
+                await sequelize.sync();
+                console.log('Database Synced.');
+
+                // Ensure Master Admin exists regardless of salons
+                const [adminSalon] = await Salon.findOrCreate({
+                    where: { slug: 'admin' },
+                    defaults: { name: 'Xonguile App Admin' }
+                });
+
+                const [masterUser, created] = await User.findOrCreate({
+                    where: { email: 'encubadoradesolucoes@gmail.com' },
+                    defaults: {
+                        name: 'Afonsinho Brown',
+                        password: '123',
+                        role: 'super_level_1',
+                        SalonId: adminSalon.id
+                    }
+                });
+
+                if (created) {
+                    console.log("✅ MASTER USER CREATED: encubadoradesolucoes@gmail.com / 123");
+
+                    // Create license for admin salon
+                    const validUntil = new Date();
+                    validUntil.setFullYear(validUntil.getFullYear() + 10);
+                    await License.findOrCreate({
+                        where: { SalonId: adminSalon.id },
+                        defaults: {
+                            key: 'XONGUILE-ADMIN-MASTER-KEY',
+                            type: 'premium_year',
+                            status: 'active',
+                            validUntil: validUntil,
+                            bookingLimit: 999999,
+                            hasWaitingList: true,
+                            reportLevel: 3
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('DB Connection Error:', error);
+            }
+        });
 
 // Server already started above with database sync

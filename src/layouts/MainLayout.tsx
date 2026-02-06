@@ -11,7 +11,8 @@ import {
     ShoppingCart,
     Menu,
     Clock,
-    Shield
+    Shield,
+    MessageCircle
 } from 'lucide-react';
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import { clsx } from 'clsx';
@@ -74,6 +75,7 @@ export function MainLayout() {
                             <NavItem to="/admin/servicos" icon={<Sparkles size={20} />} label="Serviços" />
                             <NavItem to="/admin/estoque" icon={<Package size={20} />} label="Estoque" />
                             <NavItem to="/admin/financeiro" icon={<Banknote size={20} />} label="Financeiro" />
+                            <NavItem to="/admin/suporte" icon={<MessageCircle size={20} />} label="Suporte Chat" />
                         </>
                     )}
                     <div className="pt-4 mt-4 border-t border-gray-100">

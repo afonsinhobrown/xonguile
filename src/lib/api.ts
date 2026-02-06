@@ -2,10 +2,14 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const getHeaders = () => {
     const user = localStorage.getItem('salao_user');
+    const token = localStorage.getItem('salon_token');
     const headers: any = { 'Content-Type': 'application/json' };
     if (user) {
         const userData = JSON.parse(user);
         headers['x-user-id'] = userData.id;
+    }
+    if (token) {
+        headers['x-master-token'] = token;
     }
     return headers;
 };
@@ -99,7 +103,18 @@ export const api = {
     impersonateSalon: async (id: number) => fetch(`${API_URL}/admin/salons/${id}/impersonate`, {
         method: 'POST', headers: getHeaders()
     }).then(res => res.json()),
-    getSuperStats: async () => fetch(`${API_URL}/admin/stats`, { headers: getHeaders() }).then(res => res.json()),
+    // Communication (Global & Internal)
+    sendBulkEmail: async (data: any) => fetch(`${API_URL}/admin/send-bulk-email`, {
+        method: 'POST', body: JSON.stringify(data), headers: getHeaders()
+    }).then(res => res.json()),
+
+    getTickets: async () => fetch(`${API_URL}/tickets`, { headers: getHeaders() }).then(res => res.json()),
+    addTicket: async (data: any) => fetch(`${API_URL}/tickets`, {
+        method: 'POST', body: JSON.stringify(data), headers: getHeaders()
+    }).then(res => res.json()),
+    addTicketMessage: async (id: number, content: string) => fetch(`${API_URL}/tickets/${id}/messages`, {
+        method: 'POST', body: JSON.stringify({ content }), headers: getHeaders()
+    }).then(res => res.json()),
 
     // --- PUBLIC METHODS ---
     publicListSalons: async () => fetch(`${API_URL}/public/salons`).then(res => res.json()),

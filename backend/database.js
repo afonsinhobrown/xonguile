@@ -82,6 +82,12 @@ const Client = sequelize.define('Client', {
     notes: DataTypes.TEXT
 });
 
+Client.beforeCreate((client) => {
+    if (!client.xonguileId) {
+        client.xonguileId = `XON-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+    }
+});
+
 const Service = sequelize.define('Service', {
     name: DataTypes.STRING,
     price: DataTypes.FLOAT,
@@ -116,6 +122,18 @@ const Transaction = sequelize.define('Transaction', {
     date: DataTypes.DATE
 });
 
+const Ticket = sequelize.define('Ticket', {
+    subject: { type: DataTypes.STRING, allowNull: false },
+    status: { type: DataTypes.ENUM('open', 'pending', 'resolved', 'closed'), defaultValue: 'open' },
+    priority: { type: DataTypes.ENUM('low', 'medium', 'high', 'urgent'), defaultValue: 'medium' }
+});
+
+const Message = sequelize.define('Message', {
+    content: { type: DataTypes.TEXT, allowNull: false },
+    senderRole: { type: DataTypes.ENUM('admin', 'super_level_1', 'super_level_2'), allowNull: false },
+    isRead: { type: DataTypes.BOOLEAN, defaultValue: false }
+});
+
 // --- RELATIONSHIPS (Multi-tenancy Wire-up) ---
 
 // A Salon has one License
@@ -133,11 +151,16 @@ Salon.hasMany(Service); Service.belongsTo(Salon);
 Salon.hasMany(Product); Product.belongsTo(Salon);
 Salon.hasMany(Appointment); Appointment.belongsTo(Salon);
 Salon.hasMany(Transaction); Transaction.belongsTo(Salon);
+Salon.hasMany(Ticket); Ticket.belongsTo(Salon);
 
 // Internal Relations
 Professional.hasMany(Appointment); Appointment.belongsTo(Professional);
 Client.hasMany(Appointment); Appointment.belongsTo(Client);
 Service.hasMany(Appointment); Appointment.belongsTo(Service);
+
+// Communication Relations
+Ticket.hasMany(Message); Message.belongsTo(Ticket);
+User.hasMany(Message); Message.belongsTo(User);
 
 module.exports = {
     sequelize,
@@ -149,5 +172,7 @@ module.exports = {
     Service,
     Product,
     Appointment,
-    Transaction
+    Transaction,
+    Ticket,
+    Message
 };

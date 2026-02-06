@@ -131,8 +131,8 @@ export default function AgendaPage() {
         }
     };
 
-    const getClientName = (id: number) => clients.find(c => c.id === id)?.name || 'Cliente';
-    const getServiceName = (id: number) => services.find(s => s.id === id)?.name || 'Serviço';
+    const getClientName = (app: any) => app.Client?.name || clients.find(c => c.id === (app.ClientId || app.clientId))?.name || 'Cliente';
+    const getServiceName = (app: any) => app.Service?.name || services.find(s => s.id === (app.ServiceId || app.serviceId))?.name || 'Serviço';
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -189,6 +189,17 @@ export default function AgendaPage() {
                                     </div>
                                 </div>
                             ))}
+                            {appointments.some(a => !a.ProfessionalId && !a.professionalId && a.status !== 'cancelled') && (
+                                <div className="p-4 flex items-center gap-3 justify-center bg-orange-50">
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-orange-900 border-2 border-white shadow-sm bg-orange-200">
+                                        ?
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="font-semibold text-orange-800 text-sm">Não Atribuídos</p>
+                                        <p className="text-xs text-orange-600 font-medium">Auto-Agendamento</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -206,7 +217,7 @@ export default function AgendaPage() {
                         {/* Columns Container */}
                         <div
                             className="grid divide-x divide-gray-100 relative"
-                            style={{ gridTemplateColumns: `repeat(${staff.length || 1}, minmax(0, 1fr))` }}
+                            style={{ gridTemplateColumns: `repeat(${staff.length + (appointments.some(a => !a.ProfessionalId && !a.professionalId && a.status !== 'cancelled') ? 1 : 0)}, minmax(0, 1fr))` }}
                         >
 
                             {/* Background Grid Lines */}
@@ -230,7 +241,7 @@ export default function AgendaPage() {
 
                                     {/* Render Appointments */}
                                     {appointments
-                                        .filter(app => app.ProfessionalId === s.id || app.professionalId === s.id) // Support both cases
+                                        .filter(app => (app.ProfessionalId === s.id || app.professionalId === s.id) && app.status !== 'cancelled')
                                         .map(app => {
                                             const [startHour, startMinute] = app.startTime.split(':').map(Number);
                                             const [endHour, endMinute] = app.endTime.split(':').map(Number);
@@ -254,10 +265,10 @@ export default function AgendaPage() {
                                                         top: `${topPosition}rem`,
                                                         height: `${height}rem`
                                                     }}
-                                                    title={`${getClientName(app.ClientId || app.clientId)} - ${getServiceName(app.ServiceId || app.serviceId)}`}
+                                                    title={`${getClientName(app)} - ${getServiceName(app)}`}
                                                 >
-                                                    <div className="font-bold truncate">{getClientName(app.ClientId || app.clientId)}</div>
-                                                    <div className="opacity-80 truncate text-[10px]">{getServiceName(app.ServiceId || app.serviceId)}</div>
+                                                    <div className="font-bold truncate">{getClientName(app)}</div>
+                                                    <div className="opacity-80 truncate text-[10px]">{getServiceName(app)}</div>
                                                     <div className="flex items-center gap-1 opacity-70 text-[10px] font-medium mt-0.5">
                                                         <Clock size={10} />
                                                         {app.startTime} - {app.endTime}
@@ -265,9 +276,46 @@ export default function AgendaPage() {
                                                 </div>
                                             );
                                         })}
-
                                 </div>
                             ))}
+
+                            {/* Column for Unassigned Appointments */}
+                            {appointments.some(a => !a.ProfessionalId && !a.professionalId && a.status !== 'cancelled') && (
+                                <div className="relative h-[calc(11*6rem)] z-10 bg-orange-50/30">
+                                    {appointments
+                                        .filter(app => !app.ProfessionalId && !app.professionalId && app.status !== 'cancelled')
+                                        .map(app => {
+                                            const [startHour, startMinute] = app.startTime.split(':').map(Number);
+                                            const [endHour, endMinute] = (app.endTime || app.startTime).split(':').map(Number);
+
+                                            const startOffsetMinutes = (startHour - 9) * 60 + startMinute;
+                                            const topPosition = startOffsetMinutes * 0.1;
+
+                                            const durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute) || 60;
+                                            const height = durationMinutes * 0.1;
+
+                                            return (
+                                                <div
+                                                    key={app.id}
+                                                    onClick={(e) => handleAppointmentClick(e, app)}
+                                                    className="absolute left-1 right-1 rounded-lg p-2 text-xs border-l-4 shadow-sm cursor-pointer hover:shadow-md transition-all hover:scale-[1.02] overflow-hidden z-20 bg-orange-100 border-orange-500 text-orange-900"
+                                                    style={{
+                                                        top: `${topPosition}rem`,
+                                                        height: `${height}rem`
+                                                    }}
+                                                    title={`${getClientName(app)} - ${getServiceName(app)}`}
+                                                >
+                                                    <div className="font-bold truncate">{getClientName(app)}</div>
+                                                    <div className="opacity-80 truncate text-[10px]">{getServiceName(app)}</div>
+                                                    <div className="flex items-center gap-1 opacity-70 text-[10px] font-medium mt-0.5">
+                                                        <Clock size={10} />
+                                                        {app.startTime} - {app.endTime}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                            )}
                         </div>
                     </div>
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import {
     Users, Store, CreditCard, Shield, Plus,
-    CheckCircle, XCircle, MoreVertical, Edit, Search, UserPlus, Banknote
+    CheckCircle, XCircle, MoreVertical, Edit, Search, UserPlus, Banknote, Mail, ArrowRight
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -13,7 +13,7 @@ export default function SuperAdminPage() {
     const [salons, setSalons] = useState<any[]>([]);
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'salons' | 'finance' | 'supers' | 'settings'>('salons');
+    const [activeTab, setActiveTab] = useState<'salons' | 'finance' | 'supers' | 'settings' | 'communications'>('salons');
     const user = JSON.parse(localStorage.getItem('salao_user') || '{}');
 
     const loadData = async () => {
@@ -69,6 +69,7 @@ export default function SuperAdminPage() {
                     <TabBtn active={activeTab === 'salons'} onClick={() => setActiveTab('salons')} label="Salões" />
                     <TabBtn active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} label="Financeiro" />
                     <TabBtn active={activeTab === 'supers'} onClick={() => setActiveTab('supers')} label="Equipa Super" />
+                    <TabBtn active={activeTab === 'communications'} onClick={() => setActiveTab('communications')} label="Comunicação" />
                     {user.role === 'super_level_1' && (
                         <TabBtn active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} label="Configurações" />
                     )}
@@ -235,11 +236,142 @@ export default function SuperAdminPage() {
                                     </div>
                                 </div>
                             </div>
-                        </div>
                     )}
-                </>
-            )}
+
+                            {activeTab === 'communications' && (
+                                <div className="space-y-8 animate-in fade-in duration-500">
+                                    <h2 className="text-3xl font-black text-gray-900 tracking-tighter">Central de Comunicação</h2>
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                        {/* Email Sender Card */}
+                                        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-200 shadow-xl overflow-hidden relative">
+                                            <div className="absolute top-0 right-0 p-8 opacity-5">
+                                                <Mail size={120} />
+                                            </div>
+                                            <h3 className="text-xl font-black mb-6 flex items-center gap-3 text-gray-800">
+                                                <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
+                                                    <Mail size={20} />
+                                                </div>
+                                                Enviar E-mail em Massa
+                                            </h3>
+
+                                            <form className="space-y-5" onSubmit={async (e: any) => {
+                                                e.preventDefault();
+                                                const formData = new FormData(e.target);
+                                                const payload = Object.fromEntries(formData);
+                                                try {
+                                                    setLoading(true);
+                                                    const res = await api.sendBulkEmail(payload);
+                                                    alert(`E-mail enviado com sucesso para ${res.count} destinatários!`);
+                                                    e.target.reset();
+                                                } catch (e) {
+                                                    alert('Erro ao enviar e-mail.');
+                                                } finally {
+                                                    setLoading(false);
+                                                }
+                                            }}>
+                                                <div>
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block ml-1">Destinatários</label>
+                                                    <select name="target" className="w-full h-12 bg-gray-50 border border-gray-100 rounded-2xl px-4 font-bold text-sm outline-none focus:ring-2 focus:ring-purple-400 transition-all appearance-none">
+                                                        <option value="all_salons">Todos os Salões (Donos)</option>
+                                                        <option value="all_clients">Todos os Clientes (Base Global)</option>
+                                                        <option value="active_licenses">Apenas Salões Ativos</option>
+                                                        <option value="expired_licenses">Apenas Salões Expirados</option>
+                                                        <option value="custom">Lista Personalizada (Manual)</option>
+                                                    </select>
+                                                </div>
+
+                                                <Input label="Assunto do E-mail" name="subject" placeholder="Ex: Manutenção Programada" required />
+
+                                                <div>
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block ml-1">Corpo da Mensagem (HTML Suportado)</label>
+                                                    <textarea
+                                                        name="message"
+                                                        rows={6}
+                                                        className="w-full bg-gray-50 border border-gray-100 rounded-3xl p-5 font-medium text-sm outline-none focus:ring-2 focus:ring-purple-400 transition-all"
+                                                        placeholder="Olá, informamos que..."
+                                                        required
+                                                    ></textarea>
+                                                </div>
+
+                                                <div className="pt-2">
+                                                    <Button className="w-full py-4 text-lg font-black shadow-2xl shadow-purple-600/30 rounded-2xl group">
+                                                        <span>Disparar E-mails</span>
+                                                        <Mail size={18} className="inline ml-2 group-hover:translate-x-1 transition-transform" />
+                                                    </Button>
+                                                </div>
+                                            </form>
+                                        </div>
+
+                                        {/* Quick Templates & Stats */}
+                                        <div className="space-y-6">
+                                            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
+                                                <div className="relative z-10">
+                                                    <h4 className="text-lg font-black mb-1">Estatísticas de Envio</h4>
+                                                    <p className="text-indigo-100 text-xs mb-6">Mantenha a sua base informada e engajada.</p>
+
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10">
+                                                            <p className="text-[10px] uppercase font-black opacity-60">Total Enviados</p>
+                                                            <p className="text-2xl font-black">1.240</p>
+                                                        </div>
+                                                        <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10">
+                                                            <p className="text-[10px] uppercase font-black opacity-60">Taxa de Abertura</p>
+                                                            <p className="text-2xl font-black">64%</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="absolute -bottom-10 -right-10 opacity-10">
+                                                    <Sparkles size={200} />
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-200">
+                                                <h4 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6">Modelos Rápidos</h4>
+                                                <div className="space-y-3">
+                                                    <QuickTemplate
+                                                        title="Manutenção do Sistema"
+                                                        desc="Avisa sobre indisponibilidade técnica."
+                                                        onClick={() => { }}
+                                                    />
+                                                    <QuickTemplate
+                                                        title="Novidade: App Mobile"
+                                                        desc="Anúncio do lançamento da app nativa."
+                                                        onClick={() => { }}
+                                                    />
+                                                    <QuickTemplate
+                                                        title="Aviso de Expiração"
+                                                        desc="Lembrete de pagamento para salões."
+                                                        onClick={() => { }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            );
+}
+
         </div>
+            </div >
+    );
+}
+
+function QuickTemplate({ title, desc, onClick }: any) {
+    return (
+        <button
+            onClick={onClick}
+            className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-purple-300 hover:bg-purple-50 transition-all group text-left"
+        >
+            <div>
+                <p className="text-sm font-black text-gray-800">{title}</p>
+                <p className="text-[10px] text-gray-400 font-medium">{desc}</p>
+            </div>
+            <ArrowRight size={16} className="text-gray-300 group-hover:text-purple-600 transition-colors" />
+        </button>
     );
 }
 
